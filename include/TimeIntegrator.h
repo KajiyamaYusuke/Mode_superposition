@@ -4,8 +4,8 @@
 
 class TimeIntegrator {
 public:
-    double dt;
 
-    void rungeKuttaStep(double f, double q, double qdot, double omg, double zeta,
-                        double& qf, double& qfdot);
+    void rungeStep(double f, double q, double qdot, double dt,
+                   double omg, double zeta,
+                   double &qf, double &qfdot);
 };

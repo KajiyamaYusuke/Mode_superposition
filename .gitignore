@@ -1,0 +1,21 @@
+# ビルド生成物
+build/
+
+# 実行結果
+output/
+output2/
+result/
+
+# 一時ファイル
+*.o
+*.obj
+*.log
+*.dat
+*.csv
+
+# VSCode 設定
+.vscode/
+
+# 実行ファイル
+simulation
+*.exe

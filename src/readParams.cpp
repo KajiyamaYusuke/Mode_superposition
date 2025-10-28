@@ -1,115 +1,104 @@
 #include "SimulationParams.h"
-#include <iostream>
 #include <fstream>
-#include <string>
-#include <stdexcept>
-#include <limits>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+#include <cctype>
 
+// トリム関数（先頭・末尾の空白除去）
+static inline void trim(std::string &s) {
+    auto notspace = [](int ch){ return !std::isspace(ch); };
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), notspace));
+    s.erase(std::find_if(s.rbegin(), s.rend(), notspace).base(), s.end());
+}
 
-void SimulationParameters::loadFromFile(const std::string& filename) {
-    std::ifstream fin(filename);
-    if (!fin) {
-        throw std::runtime_error("Cannot open file: " + filename);
+static inline std::string toLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); });
+    return s;
+}
+
+bool SimulationParams::loadFromFile(const fs::path& filename, std::string& err) {
+    std::ifstream ifs(filename);
+    if (!ifs) { err = "Cannot open parameter file"; return false; }
+
+    std::string line;
+    std::vector<std::string> tokens;
+    auto nextLine = [&]() -> std::string {
+        while (std::getline(ifs, line)) {
+            trim(line);
+            if (line.empty() || line[0] == '#') continue;
+            return line;
+        }
+        return "";
+    };
+
+    try {
+        nmode  = std::stoi(nextLine());
+        nsurfz = std::stoi(nextLine());
+        nstep  = std::stoi(nextLine());
+        nwrite = std::stoi(nextLine());
+        dt     = std::stod(nextLine());
+        zeta   = std::stod(nextLine());
+
+        std::istringstream iss(nextLine());
+        iss >> kc1 >> kc2 >> kc3;
+
+        ncont = std::stoi(nextLine());
+
+        freqFile  = nextLine();
+        modeFile  = nextLine();
+        surfFile  = nextLine();
+        inputDir  = nextLine();
+        resultDir = nextLine();
+
+        iforce = std::stoi(nextLine());
+        ps     = std::stod(nextLine());
+        rho    = std::stod(nextLine());
+        mu     = std::stod(nextLine());
+        mass   = std::stod(nextLine());
+
+        iforce  = std::stoi(nextLine());
+        forcef  = std::stod(nextLine());
+        famp    = std::stod(nextLine());
+        mass    = std::stod(nextLine());
+
+    } catch (...) {
+        err = "Parse error (check file format)";
+        return false;
     }
 
-    std::string tmp;
+    return true;
+}
 
-    // nmode
-    std::getline(fin, tmp); // コメント行
-    std::getline(fin, tmp); // コメント行
-    fin >> nmode;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+bool SimulationParams::validate(std::string& err) const {
+    if (nmode <= 0) { err = "nmode must be > 0"; return false; }
+    if (nstep <= 0) { err = "nstep must be > 0"; return false; }
+    if (dt <= 0.0)  { err = "dt must be > 0"; return false; }
+    if (nwrite <= 0){ err = "nwrite must be > 0"; return false; }
+    // 追加チェック（例: ファイル/ディレクトリ存在確認を入れるならここ）
+    return true;
+}
 
-    // nsurfz
-    std::getline(fin, tmp);
-    fin >> nsurfz;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // nstep
-    std::getline(fin, tmp);
-    fin >> nstep;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // nwrite
-    std::getline(fin, tmp);
-    fin >> nwrite;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // dt
-    std::getline(fin, tmp);
-    fin >> dt;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // zeta
-    std::getline(fin, tmp);
-    fin >> zeta;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // kc1, kc2
-    std::getline(fin, tmp);
-    fin >> kc1 >> kc2;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // ncount
-    std::getline(fin, tmp);
-    fin >> ncount;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    // freqFile
-    std::getline(fin, tmp);
-    std::getline(fin, freqFile);
-
-    // modeFile
-    std::getline(fin, tmp);
-    std::getline(fin, modeFile);
-
-    // surfFile
-    std::getline(fin, tmp);
-    std::getline(fin, surfFile);
-
-    // inputDir
-    std::getline(fin, tmp);
-    std::getline(fin, inputDir);
-
-    // resultDir
-    std::getline(fin, tmp);
-    std::getline(fin, resultDir);
-
-    // iforce
-    std::getline(fin, tmp);
-    fin >> iforce;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    if (iforce == 1) {
-        // forcef
-        std::getline(fin, tmp);
-        fin >> forcef;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        // famp
-        std::getline(fin, tmp);
-        fin >> famp;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-    } else if (iforce == 0) {
-        // ps
-        std::getline(fin, tmp);
-        fin >> ps;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        // rho
-        std::getline(fin, tmp);
-        fin >> rho;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-        // mu
-        std::getline(fin, tmp);
-        fin >> mu;
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }
-
-    // mass
-    std::getline(fin, tmp);
-    fin >> mass;
-    fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+void SimulationParams::print(std::ostream& os) const {
+    os << "SimulationParams:\n";
+    os << "  nmode   = " << nmode << "\n";
+    os << "  nsurfz  = " << nsurfz << "\n";
+    os << "  nstep   = " << nstep << "\n";
+    os << "  nwrite  = " << nwrite << "\n";
+    os << "  dt      = " << dt << " [s]\n";
+    os << "  zeta    = " << zeta << "\n";
+    os << "  kc1     = " << kc1 << "\n";
+    os << "  kc2     = " << kc2 << "\n";
+    os << "  mass    = " << mass << "\n";
+    os << "  iforce  = " << iforce << "\n";
+    os << "  forcef  = " << forcef << "\n";
+    os << "  famp    = " << famp << "\n";
+    os << "  ps      = " << ps << " [Pa]\n";
+    os << "  rho     = " << rho << " [kg/m^3]\n";
+    os << "  mu      = " << mu << " [Pa·s]\n";
+    os << "  inputDir  = " << inputDir.string() << "\n";
+    os << "  resultDir = " << resultDir.string() << "\n";
+    os << "  freqFile  = " << freqFile.string() << "\n";
+    os << "  modeFile  = " << modeFile.string() << "\n";
+    os << "  surfFile  = " << surfFile.string() << "\n";
 }

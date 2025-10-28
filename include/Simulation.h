@@ -1,4 +1,4 @@
-#include "ModeShape.h"
+
 #include "SimulationParams.h"
 #include "ForceCalculator.h"
 #include "TimeIntegrator.h"
@@ -6,12 +6,19 @@
 
 class Simulation {
 public:
-    SimulationParameters params;
-    ModeShape modeShape;
-    ForceCalculator forceCalc;
+    SimulationParams params;
+    State state; 
+    Geometry geom;
+    ModeData mdata;
+    ForceCalculator fCalc;
     TimeIntegrator integrator;
+
+    Simulation()
+        : fCalc(geom, mdata, state, params )            // 必須引数を渡して初期化// TimeIntegrator も同様
+    {}
+
 
     void initialize();
     void run();
-    void outputResults();
+    void writeVTK(int step, const Geometry& geom, const State& state, const std::string& rdir, int nwrite);
 };
