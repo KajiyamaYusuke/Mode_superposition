@@ -62,8 +62,6 @@ void State::mode2uf(const Geometry& geom, const ModeData& modeData, int step) {
         predictedDisp[i].ufy += geom.points[i].y ;
         predictedDisp[i].ufz += geom.points[i].z ;
 
-        
-
     }
 
 }
@@ -71,6 +69,7 @@ void State::mode2uf(const Geometry& geom, const ModeData& modeData, int step) {
 
 void State::calcArea(const Geometry& geom) {
     if (geom.nxsup < 2 || geom.nsurfz < 2) return;
+
 
     // harea
     harea.assign(geom.nxsup, 0.0);
@@ -83,16 +82,17 @@ void State::calcArea(const Geometry& geom) {
             if (pid1 < 0 || pid2 < 0) continue;
 
             double ztmp = std::abs(disp[pid2].uz - disp[pid1].uz);
-            if( i == 11 && ztmp > 1e1){
-                //std::cout<<"i,j="<<i<<" "<<j<<","<<pid2<<" - "<<pid1<<"\n";
-            }
-
             double ytmp = geom.ymid[j] - 0.5 * (disp[pid2].uy + disp[pid1].uy);
+
+            if (ytmp < 0.0) ytmp = 0.0;
+            if (!std::isfinite(ytmp)) ytmp = 0.0;
+            if (!std::isfinite(ztmp)) ztmp = 0.0;
 
             hi += 2.0 * ytmp * ztmp;
         }
+
         harea[i] = hi;
-        //std::cout<<"harea["<< i << "] = "<< harea[i]<<std::endl;
+        //std::cout<<"harea["<< 25 << "] = "<< harea[25]<<std::endl;
     }
 
     // degree

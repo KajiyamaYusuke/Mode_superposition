@@ -39,7 +39,7 @@ void Geometry::loadFromVTK(const std::string& filename) {
                     while (std::getline(file, line) && line.find("</DataArray>") == std::string::npos) {
                         std::istringstream ss(line);
                         double x, y, z;
-                        while (ss >> x >> z >> y) {
+                        while (ss >> y >> z >> x) {
                             pointsBuffer.push_back(x);
                             pointsBuffer.push_back(y);
                             pointsBuffer.push_back(z);
@@ -243,6 +243,39 @@ void Geometry::surfExtract(const std::string &surfaceFile, int nsurfz_param) {
         }
     }
 
+        std::ofstream ofs("../output/surfp_output.csv");
+    if (!ofs) {
+        std::cerr << "Failed to open surfp_output.csv for writing.\n";
+        return;
+    }
+
+    ofs << "# i j node_id x y z\n";
+    for (int i = 0; i < nsurfl; ++i) {
+        for (int j = 0; j < nsurfz; ++j) {
+            int nid = surfp[i][j];
+            if (nid < 0) continue;
+            const auto& g = points[nid];
+            ofs << i << ", " << j << ", "
+                << nid << ", " << g.x << ", " << g.y << ", " << g.z << "\n";
+        }
+    }
+
+
+    //int i = 1;  // 調べたい行
+
+   for (int i = 0; i < nsurfl; ++i) {
+        for (int j = 0; j < nsurfz; ++j) {
+            int pid = surfp[i][j];
+            if (pid >= 0)
+                std::cout << "i=" << std::setw(2) << i << " j=" << std::setw(2) << j
+                        << " pid=" << std::setw(4) << pid
+                        << " (x,y,z)=( " << std::setw(8) <<points[pid].x << ", " 
+                                        << std::setw(8) <<points[pid].y << ", " 
+                                        << std::setw(8) <<points[pid].z << " )\n";
+        }
+    }  
+
+
 }
 
 // ------------------------
@@ -260,6 +293,11 @@ void Geometry::surfArea() {
 
     ymid.assign(nsurfz, 0.0);
 
+    double ymidconst = points[0].y;
+    for (const auto &p : points) {
+        if (p.y > ymidconst) ymidconst = p.y;
+    }
+
     for (int j = 0; j < nsurfz; ++j) {
         double ymax = -1e9;
         for (int i = 0; i < nsurfl; ++i) {
@@ -268,8 +306,11 @@ void Geometry::surfArea() {
                 ymax = points[idx].y;
             }
         }
-        ymid[j] = ymax;  // j列における最大y値
+        //ymid[j] = ymax ;  // j列における最大y値　
+        ymid[j] = ymidconst;
     }
+
+
 
     double min_diff = 1e3;
     nxsup = 0;
@@ -280,6 +321,7 @@ void Geometry::surfArea() {
             nxsup = i+1;
         }
     }
+
 
 
     if (nsurfl < 2 || nsurfz < 2) return; // 十分なサーフェスがない場合
@@ -334,7 +376,7 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
                     double x = std::stod(tokens[3]);
                     double y = std::stod(tokens[4]);
                     double z = std::stod(tokens[5]);
-                    grid[id] = {x, z, y};
+                    grid[id] = {z, x, y};
                 } catch (const std::exception& e) {
                     std::cerr << "Failed to parse GRID line: " << line << "\n";
                 }
@@ -356,6 +398,8 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
     std::set<int> uniqueNodes;
     for (auto& q : quads)
         uniqueNodes.insert(q.begin(), q.end());
+    
+    std::cout<<"uniquenodes"<<uniqueNodes.size();
 
     // 座標付きで並べ替え用にベクトル化
     struct NodeRef { double x, y, z; };
@@ -366,7 +410,7 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
     }
 
     // x → z の順でソート（i: x方向, j: z方向）
-    const double eps = 3e-1;
+    const double eps = 1e-3;
 
     std::sort(nodes.begin(), nodes.end(), [&](const NodeRef &a, const NodeRef &b){
 
@@ -417,19 +461,20 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
         if (p.z > zmax) zmax = p.z;
 
 
+
     std::cout << "Surface extracted: " << nodes.size() 
               << " nodes → (" << nsurfl << " x " << nsurfz << ") grid.\n";
 
     // surfpの内容を出力して確認
-    std::ofstream ofs("../output/surfp_output.txt");
+    std::ofstream ofs("../output/surfp_output.csv");
     if (!ofs) {
-        std::cerr << "Failed to open surfp_output.txt for writing.\n";
+        std::cerr << "Failed to open surfp_output.csv for writing.\n";
         return;
     }
 
     ofs << "# i j node_id x y z\n";
-    for (int j = 0; j < nsurfz; ++j) {
-        for (int i = 0; i < nsurfl; ++i) {
+    for (int i = 0; i < nsurfl; ++i) {
+        for (int j = 0; j < nsurfz; ++j) {
             int nid = surfp[i][j];
             if (nid < 0) continue;
             const auto& g = points[nid];
@@ -439,9 +484,9 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
     }
 
 
-    int i = 1;  // 調べたい行
+    //int i = 1;  // 調べたい行
 
-    for (int i = 0; i < nsurfl; ++i) {
+/*    for (int i = 0; i < nsurfl; ++i) {
         for (int j = 0; j < nsurfz; ++j) {
             int pid = surfp[i][j];
             if (pid >= 0)
@@ -451,7 +496,7 @@ void Geometry::surfExtractFromNAS(const std::string& nasFile, int nsurfl_param, 
                                         << std::setw(8) <<points[pid].y << ", " 
                                         << std::setw(8) <<points[pid].z << " )\n";
         }
-    } 
+    }   */
 }
 
 // ------------------------
@@ -465,10 +510,10 @@ void Geometry::print() const {
     std::cout<< "nsurfl=" <<nsurfl<<std::endl;
     std::cout<< "nsurfz=" <<nsurfz<<std::endl;
 
-    for (int i = 1; i < nxsup-1; ++i) {            // Fortran: 2..nxsup-1
+/*     for (int i = 1; i < nxsup-1; ++i) {            // Fortran: 2..nxsup-1
         for (int j = 1; j < nsurfz-1; ++j) {  // Fortran: 2..nsurfz-1
             std::cout<<sarea[i][j]<<" ";
         }  
         std::cout<<std::endl; 
-    }   
+    }  */  
 }

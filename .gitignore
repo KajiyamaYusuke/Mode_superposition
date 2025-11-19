@@ -5,6 +5,7 @@ build/
 output/
 output2/
 result/
+input/
 
 # 一時ファイル
 *.o

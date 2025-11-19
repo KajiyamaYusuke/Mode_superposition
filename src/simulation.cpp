@@ -9,13 +9,17 @@ void Simulation::initialize() {
     std::cout << "[Simulation] Initializing..." << std::endl;
     std::string err ="error";
 
-    params.loadFromFile("/home/kajiyama/code/simulation/input/param.txt", err );
+    params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("/home/kajiyama/code/simulation/input/mode_renewal3mm.vtu");
-    geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_renewal.nas",12,21);
-    //geom.surfExtract("/home/kajiyama/code/simulation/input/surface.txt", 20);
+    geom.loadFromVTK("../input/M5/M5_mode_kawahara_mesh7.vtu");
+    //geom.loadFromVTK("../input/old/no_mem_mode.vtu");
+    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_renewal.nas",13,18);
+    geom.surfExtractFromNAS("../input/M5/M5_surface_kawahara_mesh7.nas",64,70);
+    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_old_c.nas",21,30);
+
+    //geom.surfExtract("/home/kajiyama/code/simulation/input/old/surface.txt", 20);
     geom.surfArea();
-    //geom.print();
+    geom.print();
  
     geom.jtypes[5] = 3;   // 三角形
     geom.jtypes[9] = 4;   // 四角形
@@ -23,8 +27,10 @@ void Simulation::initialize() {
     geom.jtypes[13] = 6;  // 六面体
 
     mdata.initialize(params.nmode, geom);
-    mdata.loadFromVTU("/home/kajiyama/code/simulation/input/mode_renewal3mm.vtu", geom);
-    mdata.loadFreqDamping("/home/kajiyama/code/simulation/input/frequency_renewal3mm.txt");
+    mdata.loadFromVTU("../input/M5/M5_mode_kawahara_mesh7.vtu", geom);
+    //mdata.loadFromVTU_old("../input/old/no_mem_mode.vtu", geom);
+    mdata.loadFreqDamping("../input/M5/M5_freq_kawahara_mesh7.txt");
+    //mdata.loadFreqDamping("../input/old/no_mem_frequency.txt");
 
 
     mdata.normalizeModes( params.mass, geom);
@@ -50,18 +56,36 @@ void Simulation::run() {
     int num = 1;
 
     std::ofstream fa("../output/area.dat");
-    std::ofstream fu("../output/velocity.dat");
+    std::ofstream fu("../output/displace.dat");
     std::ofstream fp("../output/pressure.dat");
 
     fa << "# x[m]  area[m^2]\n";
-    fu << "# x[m]  velocity[m/s]\n";
+    fu << "# x[m]  displace\n";
     fp << "# x[m]  pressure[Pa]\n"; 
 
     std::vector<double> zeta(mdata.nModes, 0);
-    double omega1 = 200 * 2 * M_PI;
-    double omega2 = 400 * 2 * M_PI;
-    double alpha = 2*omega1*omega2*((0.0015*omega2 - 0.0025*omega1)/(omega2*omega2 - omega1*omega1));
-    double beta = 2*(omega2*0.0025 - omega1* 0.0015)/(omega2*omega2 - omega1*omega1);
+    double omega1 = 50 * 2 * M_PI;
+    double omega2 = 250 * 2 * M_PI;
+    double alpha = 2*omega1*omega2*((0.0015*omega2 - 0.01*omega1)/(omega2*omega2 - omega1*omega1));
+    double beta = 2*(omega2*0.01 - omega1* 0.0015)/(omega2*omega2 - omega1*omega1);
+
+    double minDist2 = 1e2;
+    int nearestIdx = -1;
+    for (int i = 0; i < geom.nsurfl; ++i) {
+        for (int j = 0; j < geom.nsurfz; ++j) {
+            int idx = geom.surfp[i][j];
+            double dx = geom.points[idx].x - geom.xsup;
+            double dz = geom.points[idx].z - 8.6;
+            double dist2 = dx*dx + dz*dz ;
+
+
+            if (dist2 < minDist2) {
+                minDist2 = dist2;
+                nearestIdx = idx;
+            }
+        }
+    }
+    std::cout<<"idx="<<geom.points[nearestIdx].x<<", "<<geom.points[nearestIdx].y<<", "<<geom.points[nearestIdx].z<<"\n";
 
     for ( int i = 0; i < mdata.nModes; ++i){
         zeta[i] = 1/2*(alpha/(2.0 * M_PI * mdata.frequencies[i]) + beta * 2.0 * M_PI * mdata.frequencies[i]);
@@ -80,6 +104,9 @@ void Simulation::run() {
 
         if (n % 100 == 0) {
             fCalc.outputForceVectors(n);
+            for (int i = 0; i<25; ++i){
+                //std::cout<<"i = "<<i<<"p = "<<fCalc.psurf[i]<<std::endl;
+            }
         }
 
         fCalc.contactForce();
@@ -87,8 +114,8 @@ void Simulation::run() {
 
 
         if ( n%20 == 0){
-            fa <<std::setw(3)<< n;
-            fp <<std::setw(3)<< n;
+            fa <<std::setw(4)<< n;
+            fp <<std::setw(4)<< n;
             for (int i = 0; i < geom.nxsup; ++i) {
                 
                 fa << " " <<std::setw(8)<< state.harea[i] << " ";
@@ -96,11 +123,9 @@ void Simulation::run() {
             }
             fa << "\n";
             fp << "\n";
-            fu << n << " " << fCalc.Ug[n] << "\n";
+            
         }
 
-
-        int icont = 0;
 
         for (int icont = 1; icont <= params.ncont; ++icont) {
 
@@ -117,22 +142,30 @@ void Simulation::run() {
                 double omg = 2.0 * M_PI * mdata.frequencies[i];
                 double qf, qfdot;
 
-                integrator.rungeStep(f, q, qdot, params.dt, omg, zeta[i], qf, qfdot);
+                integrator.rungeStep(f, q, qdot, params.dt, omg, params.zeta, qf, qfdot);
 
                 state.qf[i]    = qf;
                 state.qfdot[i] = qfdot;
 
             }
+            
+
 
 
             // 6. モード変位 → 節点変位
             state.mode2uf(geom, mdata, n+1);
+
+
 
             // calculate dissipation force for contact
             fCalc.contactFlag = false;
             fCalc.calcDis();
 
             if (!fCalc.contactFlag) break;  // contactFlg == false の場合はループを抜ける
+        }
+
+        if (n%20 ==0){
+            fu << n *1e-5 << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
         }
     
         state.uf2u();
@@ -159,8 +192,8 @@ void Simulation::writeVTK(int step, const Geometry& geom, const State& state, co
         return;
     }
 
-/*     std::cout << "step: " << step * nwrite << std::endl;
-    std::cout << "output: " << filename << std::endl;  */
+    std::cout << "step: " << step * nwrite << std::endl;
+    std::cout << "output: " << filename << std::endl;   
 
     fout << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n";
     fout << "  <UnstructuredGrid>\n";
