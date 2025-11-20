@@ -11,8 +11,8 @@ public:
     int nSteps  = 0;   // タイムステップ数
     double dt   = 0.0; // 時間刻み幅
 
-    std::vector<double> q, qdot; // [nModes][]
-    std::vector<double> qf, qfdot; 
+    std::vector<double> q, qdot, qddot; // [nModes][]
+    std::vector<double> qf, qfdot, qfddot; 
     std::vector<Displacement> disp;                   // [nPoints]
     std::vector<Displacement> vel;
     std::vector<Displacement> predictedDisp;

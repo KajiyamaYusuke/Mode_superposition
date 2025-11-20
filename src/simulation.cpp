@@ -12,9 +12,12 @@ void Simulation::initialize() {
     params.loadFromFile("../input/param.txt", err );
 
     geom.loadFromVTK("../input/M5/M5_mode_kawahara_mesh7.vtu");
+    //geom.loadFromVTK("../input/M5/M5_mode_kawahara.vtu");
     //geom.loadFromVTK("../input/old/no_mem_mode.vtu");
+
     //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_renewal.nas",13,18);
     geom.surfExtractFromNAS("../input/M5/M5_surface_kawahara_mesh7.nas",64,70);
+    //geom.surfExtractFromNAS("../input/M5/M5_surface_kawahara.nas",36,30);
     //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_old_c.nas",21,30);
 
     //geom.surfExtract("/home/kajiyama/code/simulation/input/old/surface.txt", 20);
@@ -27,6 +30,7 @@ void Simulation::initialize() {
     geom.jtypes[13] = 6;  // 六面体
 
     mdata.initialize(params.nmode, geom);
+
     mdata.loadFromVTU("../input/M5/M5_mode_kawahara_mesh7.vtu", geom);
     //mdata.loadFromVTU_old("../input/old/no_mem_mode.vtu", geom);
     mdata.loadFreqDamping("../input/M5/M5_freq_kawahara_mesh7.txt");
@@ -34,6 +38,7 @@ void Simulation::initialize() {
 
 
     mdata.normalizeModes( params.mass, geom);
+    
 
     state.initialize(geom.nPoints, params.nmode, params.nstep, geom);
 
@@ -50,7 +55,7 @@ void Simulation::run() {
     // nSteps+1 に対応
     state.qf.resize(mdata.nModes, 0.0);
     state.qfdot.resize(mdata.nModes, 0.0);
-
+    state.qfddot.resize(mdata.nModes, 0.0);
 
     double P = 1;
     int num = 1;
@@ -74,7 +79,7 @@ void Simulation::run() {
     for (int i = 0; i < geom.nsurfl; ++i) {
         for (int j = 0; j < geom.nsurfz; ++j) {
             int idx = geom.surfp[i][j];
-            double dx = geom.points[idx].x - geom.xsup;
+            double dx = geom.points[idx].x - 10;
             double dz = geom.points[idx].z - 8.6;
             double dist2 = dx*dx + dz*dz ;
 
@@ -135,7 +140,7 @@ void Simulation::run() {
 
 
             // 5. 時間積分（RK4）
-            for (int i = 0; i < mdata.nModes; i++) {
+/*             for (int i = 0; i < mdata.nModes; i++) {
                 double f = fCalc.fi[i];
                 double q = state.q[i];
                 double qdot = state.qdot[i];
@@ -147,8 +152,29 @@ void Simulation::run() {
                 state.qf[i]    = qf;
                 state.qfdot[i] = qfdot;
 
-            }
+            } */
             
+            // Newmark parameters (average acceleration)
+            const double beta  = 1.0/4.0;
+            const double gamma = 1.0/2.0;
+
+
+            for (int i = 0; i < mdata.nModes; ++i) {
+                double f    = fCalc.fi[i];                      // モード力 (tilde f_i)
+                double q    = state.q[i];                       // q_n
+                double qdot = state.qdot[i];                    // qdot_n
+                double qdd  = state.qddot[i];                   // qddot_n (保持しておく)
+                double omega = 2.0 * M_PI * mdata.frequencies[i];
+
+                double qf, qfdot, qfddot;
+                integrator.newmarkStep(f, q, qdot, qdd, params.dt, omega, params.zeta,
+                                    beta, gamma, qf, qfdot, qfddot);
+
+                state.qf[i]    = qf;
+                state.qfdot[i] = qfdot;
+                state.qfddot[i] = qfddot;
+            }
+
 
 
 

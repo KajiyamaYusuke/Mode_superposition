@@ -10,7 +10,7 @@ void State::initialize(int nPoints_, int nModes_, int nSteps_, const Geometry& g
     // モード座標の初期化
     q.assign(nModes, 0.0);
     qdot.assign(nModes, 0.0);
-
+    qddot.assign(nModes, 0.0);
 
     // 節点変位
     disp.assign(nPoints, Displacement());
@@ -130,6 +130,7 @@ void State::uf2u() {
     for(int i = 0; i < nModes; ++i){
         q[i] = qf[i];
         qdot[i] = qfdot[i];
+        qddot[i] = qfddot[i];
     }
 
     // 節点座標を上書き
