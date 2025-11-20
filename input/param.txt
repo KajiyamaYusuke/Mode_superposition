@@ -4,7 +4,7 @@
 # number of points along z-axis(nsurfz)
 18
 # number of step nstep
-20000
+10000
 # output interval nwrite
 20
 # time step for time integration dt

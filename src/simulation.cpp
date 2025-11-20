@@ -58,7 +58,7 @@ void Simulation::run() {
     state.qfddot.resize(mdata.nModes, 0.0);
 
     double P = 1;
-    int num = 1;
+    int num = 0;
 
     std::ofstream fa("../output/area.dat");
     std::ofstream fu("../output/displace.dat");
@@ -95,6 +95,14 @@ void Simulation::run() {
     for ( int i = 0; i < mdata.nModes; ++i){
         zeta[i] = 1/2*(alpha/(2.0 * M_PI * mdata.frequencies[i]) + beta * 2.0 * M_PI * mdata.frequencies[i]);
     }
+
+    state.mode2uf(geom, mdata, 0); 
+    state.uf2u(); // dispを更新
+    writeVTK(num, geom, state, "../result", 1); // step 0 を出力
+    num++;
+    std::cout << "[Simulation] Output step 0 (Initial State). check this if bumpy." << std::endl;
+
+
 
     for (int n = 0
         ; n < params.nstep; n++) {
@@ -137,6 +145,18 @@ void Simulation::run() {
             // 4. モード力への変換
             fCalc.f2mode();
 
+        double rampTime = 0.01; // 0.1秒かけて負荷を立ち上げる（シミュレーション時間に合わせて調整可）
+        double rampFactor = 1.0;
+        
+        if (t < rampTime) {
+            rampFactor = t / rampTime;
+            // ※ sinカーブなどもっと滑らかにする方法もありますが、まずは線形で十分です
+        }
+
+        // モード力に係数をかける
+        for(int i=0; i<mdata.nModes; ++i) {
+            fCalc.fi[i] *= rampFactor;
+        }
 
 
             // 5. 時間積分（RK4）
@@ -155,8 +175,8 @@ void Simulation::run() {
             } */
             
             // Newmark parameters (average acceleration)
-            const double beta  = 1.0/4.0;
-            const double gamma = 1.0/2.0;
+            const double beta  = 0.3025;
+            const double gamma = 0.6;
 
 
             for (int i = 0; i < mdata.nModes; ++i) {
