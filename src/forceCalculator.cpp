@@ -41,6 +41,19 @@ void ForceCalculator::initialize() {
     Ug.assign(state.nSteps, 0.0);
     minHarea.assign(state.nSteps, 0.0);
 
+    // 実験条件の設定例
+    double flow_L_min = 160.0; 
+    Qin = (flow_L_min / 60.0) * 1.0e-3; // L/min -> m^3/s 
+    
+    // チューブの体積 
+    double r = 0.0125; 
+    double L = 0.25;
+    Volume = M_PI * r * r * L; 
+    
+    K_air = 1.13 * 340.0 * 340.0; // rho * c^2
+    
+    current_psub = 0.0; // 初期圧力
+
     std::cout << "[ForceCalculator] initialized: "
               << "nPoints=" << nPoints
               << ", nModes=" << nModes
@@ -88,17 +101,23 @@ void ForceCalculator::calcForce(double t, int n) {
         // separation point
         int nsep = findNsep(minHarea[n]) ;
 
+        double Qout = 0.0;
+
         // 流量 Ug
-        if (minHarea[n] > 0.0) {
-            Ug[n] = std::sqrt(2.0 * sp.ps / sp.rho) * minHarea[n];
+        if (minHarea[n] > 0.0 && current_psub > 0.0) {
+            Qout = std::sqrt(2.0 * current_psub / sp.rho) * minHarea[n];
         } else {
-            Ug[n] = 0.0;
+            Qout = 0.0;
         }
 
+        Ug[n] = Qout;
+
+        double dP = (K_air / Volume) * (Qin - Qout) * sp.dt;
+        current_psub += dP;
 
         // psurf 計算
         std::fill(psurf.begin(), psurf.end(), 0.0);
-        psurf[0] = sp.ps;
+        psurf[0] = current_psub;
 
         if (minHarea[n] - 0.0 > 1e-3) {
             for (int i = 1; i < nsep; i++) {
@@ -114,7 +133,7 @@ void ForceCalculator::calcForce(double t, int n) {
             }
         } else {
             for (int i = 1; i < nsep-1; i++) {
-                psurf[i] = sp.ps;
+                psurf[i] = current_psub;
             }
             //std::cout<<"cloze, n = "<< n <<std::endl;
         }
@@ -210,30 +229,6 @@ void ForceCalculator::contactForce() {
 
             double f_total = (f_contact + f_damp) * geom.sarea[i][j] * 1e-6;
 
-            
-/*         auto is_bad = [](double v) {
-            return std::isnan(v) || std::isinf(v);
-        };
-
-        if (is_bad(y) || is_bad(ydot) || is_bad(ymid) || is_bad(yhat) ||
-            is_bad(pen) || is_bad(f_contact) || is_bad(f_damp) || is_bad(f_total)) {
-
-            std::cerr << "\n=== NaN detected in contact force ===\n";
-            std::cerr << "i = " << i << ", j = " << j << ", node = " << node << "\n";
-            std::cerr << "y      = " << y << "\n";
-            std::cerr << "ydot   = " << ydot << "\n";
-            std::cerr << "ymid   = " << ymid << "\n";
-            std::cerr << "yhat   = " << yhat << "\n";
-            std::cerr << "pen    = " << pen << "\n";
-            std::cerr << "f_contact = " << f_contact << "\n";
-            std::cerr << "f_damp    = " << f_damp << "\n";
-            std::cerr << "f_total   = " << f_total << "\n";
-            std::cerr << "kc3eff    = " << kc3eff << "\n";
-            std::cerr << "area      = " << geom.sarea[i][j] << "\n";
-            std::cerr << "======================================\n";
-
-            throw std::runtime_error("NaN detected in contact force computation");
-        } */
             fy[i][j] += f_total;
             contactFlag = true;
         }
@@ -317,12 +312,17 @@ double ForceCalculator::findMinHarea() {
 }
 
 int ForceCalculator::findNsep(double minH) {
-    for (int i = 1; i < geom.nxsup; i++) {
+    int min_idx = geom.nxsup;
+
+for (int i = 1; i < geom.nxsup; i++) {
         if (std::fabs(state.harea[i] - minH) < 1e-16 || state.harea[i] <= 0.0) {
-            return i+1;
+            min_idx = i; 
+            break; // 見つけたらループを抜ける
         }
     }
-    return geom.nxsup;
+
+    int extended_nsep = std::min(min_idx + 1, geom.nxsup); 
+    return extended_nsep;
 }
 
 

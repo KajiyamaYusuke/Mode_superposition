@@ -13,6 +13,11 @@ public:
     std::vector<std::vector<double>> fx, fy, fz; // [nPoints][]
     std::vector<double> fi; // モード力 [nModes]
 
+    double current_psub; // 現在の声門下圧
+    double Qin;          // 供給流量 (m^3/s)
+    double Volume;       // 声門下容積 (m^3)
+    double K_air;        // 体積弾性率 (Pa)
+
     // 出力用
     std::vector<double> Ug, minHarea; 
     std::vector<double> psurf; 

@@ -40,8 +40,8 @@ void TimeIntegrator::newmarkStep(
 
     // Effective force
     double feff = f
-        + (gamma * dt * c + beta * dt * dt * k) * q_pred
-        + (gamma * dt) * qdot_pred;
+        - k * q_pred
+        - c * qdot_pred;
 
     // Solve for new acceleration
     double qdd_new = feff / keff;
