@@ -145,19 +145,18 @@ void Simulation::run() {
             // 4. モード力への変換
             fCalc.f2mode();
 
-        double rampTime = 0.01; // 0.1秒かけて負荷を立ち上げる（シミュレーション時間に合わせて調整可）
+        double rampDuration = 0.05; // 0.1秒かけて立ち上げ（状況により0.5など長くする）
         double rampFactor = 1.0;
         
-        if (t < rampTime) {
-            rampFactor = t / rampTime;
-            // ※ sinカーブなどもっと滑らかにする方法もありますが、まずは線形で十分です
+        if (t < rampDuration) {
+            rampFactor = t / rampDuration; 
+            // 例: t=0なら0倍, t=0.05なら0.5倍, t=0.1以上なら1.0倍
         }
 
-        // モード力に係数をかける
+        // 計算されたモード力すべてに係数をかける
         for(int i=0; i<mdata.nModes; ++i) {
             fCalc.fi[i] *= rampFactor;
         }
-
 
             // 5. 時間積分（RK4）
 /*             for (int i = 0; i < mdata.nModes; i++) {
@@ -175,8 +174,8 @@ void Simulation::run() {
             } */
             
             // Newmark parameters (average acceleration)
-            const double beta  = 0.3025;
-            const double gamma = 0.6;
+            const double beta  = 0.25;
+            const double gamma = 0.5;
 
 
             for (int i = 0; i < mdata.nModes; ++i) {

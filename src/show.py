@@ -11,7 +11,7 @@ row_min = np.min(values, axis=1)  # 各行の最小値を1次元配列で返す
 
 x = labels * 1e-5
 
-plt.figure(figsize=(8,4))
+plt.figure(figsize=(15,4))
 plt.plot(x, row_min, linestyle='-', color='g')  # ← マーカーなし線だけ
 plt.xlabel('time')
 plt.ylabel('area')

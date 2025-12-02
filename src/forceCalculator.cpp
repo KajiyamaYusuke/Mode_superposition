@@ -195,8 +195,7 @@ void ForceCalculator::contactForce() {
             bool contact_now    = (y > ymid);          // 現時点で接触
             bool contact_future = (yhat > ymid);       // 次ステップで接触
 
-            if (!contact_now && !contact_future) {
-
+            if (!contact_now) {
                 continue;
             }
 
@@ -204,81 +203,17 @@ void ForceCalculator::contactForce() {
 
             double f_contact = sp.kc1 * omg2 * pen * (1.0 + sp.kc2 * omg2 * pen * pen);
 
-            double kc3eff = contact_now ? sp.kc3 : 0.0;
-
-            double f_damp = - kc3eff * ydot;
+            double f_damp =  sp.kc3 * pen * ydot;
 
             double f_total = (f_contact + f_damp) * geom.sarea[i][j] * 1e-6;
 
-            
-/*         auto is_bad = [](double v) {
-            return std::isnan(v) || std::isinf(v);
-        };
+            if (f_total > 0.0) { f_total = 0.0; }           
 
-        if (is_bad(y) || is_bad(ydot) || is_bad(ymid) || is_bad(yhat) ||
-            is_bad(pen) || is_bad(f_contact) || is_bad(f_damp) || is_bad(f_total)) {
-
-            std::cerr << "\n=== NaN detected in contact force ===\n";
-            std::cerr << "i = " << i << ", j = " << j << ", node = " << node << "\n";
-            std::cerr << "y      = " << y << "\n";
-            std::cerr << "ydot   = " << ydot << "\n";
-            std::cerr << "ymid   = " << ymid << "\n";
-            std::cerr << "yhat   = " << yhat << "\n";
-            std::cerr << "pen    = " << pen << "\n";
-            std::cerr << "f_contact = " << f_contact << "\n";
-            std::cerr << "f_damp    = " << f_damp << "\n";
-            std::cerr << "f_total   = " << f_total << "\n";
-            std::cerr << "kc3eff    = " << kc3eff << "\n";
-            std::cerr << "area      = " << geom.sarea[i][j] << "\n";
-            std::cerr << "======================================\n";
-
-            throw std::runtime_error("NaN detected in contact force computation");
-        } */
             fy[i][j] += f_total;
             contactFlag = true;
         }
     } 
 
-        // パラメータ設定（調整可）
-    /* const double v_th   = 0.05;     // [m/s] 以下なら「密着」とみなす速度閾値
-    const double eps_adh = 0.2;     // [–] 粘着の強さ（0〜1）
-    const double delta_adh = 5e-2;  // [m] 接触面からどれくらい離れても引き合うか
-
-    for (int i = 0; i < geom.nxsup; ++i) {
-        for (int j = 1; j < geom.nsurfz - 1; ++j) {
-            int idx = geom.surfp[i][j];
-            double yval = state.disp[idx].uy;   // 節点変位
-            double ydot = state.vel[idx].uy;    // y速度
-            double gap = geom.ymid[j] - yval;   // +: 離れ, -: 食い込み
-            double fy_tmp = 0.0;
-
-            bool inContact = (gap < 0.0);  // ペナルティ判定
-
-            // ---- 通常接触力（ペナルティ法）----
-            if (inContact) {
-                double ytmp = gap * 1e-3; // mm→m
-                fy_tmp += (sp.kc1 * omg2 * ytmp * (1.0 + sp.kc2 * omg2 * ytmp * ytmp)
-                          - sp.kc3 * ydot);
-                contactFlag = true;
-            }
-
-            // ---- 粘着的な保持条件（離れかけでも保持）----
-            else if (contactFlag && fabs(ydot) < v_th && gap < delta_adh) {
-                // 距離に応じて弱まる“粘着力”
-                double Fadh = -eps_adh * sp.kc1 * omg2 * (delta_adh - gap);
-                fy_tmp += Fadh;
-                contactFlag = true;
-            } else {
-                contactFlag = false;
-            }
-
-            // ---- 力を加算 ----
-            if (contactFlag) {
-                fy[i][j] += fy_tmp * geom.sarea[i][j] * 1e-6;
-                contactFlag = true;
-            }
-        }
-    } */
 }
 
 void ForceCalculator::calcDis() {
