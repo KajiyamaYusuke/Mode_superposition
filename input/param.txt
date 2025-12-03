@@ -10,7 +10,7 @@
 # time step for time integration dt
 1.0E-5
 # damping coefficient zeta
-0.02
+0.01
 # contact coefficients kc1 , kc2 and kc3(Pa / m*rad)
 10    6.0000E+3    300
 # max iteration for contact calculation
@@ -35,6 +35,8 @@ result
 1.80000E-5
 # mass of vocal fold (kg)
 1.0425E-3
+# verocity of sounds (m/s)
+343.0
 
 
 

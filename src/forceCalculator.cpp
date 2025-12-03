@@ -13,6 +13,7 @@ auto checkNaN = [](double val, const std::string& name) {
 };
 
 
+
 ForceCalculator::ForceCalculator(const Geometry& geom_, const ModeData& md_, State& st_, const SimulationParams& sp_)
     : geom(geom_), modeData(md_), state(st_), sp(sp_) {}
 
@@ -40,6 +41,63 @@ void ForceCalculator::initialize() {
     psurf.assign(nxsup, 0.0);
     Ug.assign(state.nSteps, 0.0);
     minHarea.assign(state.nSteps, 0.0);
+
+    Uu.assign(Nsecg + 1, 0.0); // +2 for boundaries
+    Pu.assign(Nsecg + 2, 0.0);
+    Ud.assign(Nsecp , 0.0);
+    Pd.assign(Nsecp , 0.0);
+
+    
+    currentUg = 0.0;    
+
+    rho = sp.rho ;
+    mu  = sp.mu ;
+    lg  = geom.zmax ; 
+
+    c_sound = sp.c_sound;
+
+    double A_inlet = 16.32 * 1e-4; // cm2 -> m2
+    double L_inlet = 10.0  * 1e-2; // cm -> m
+    
+    // 2. Subglottal Tract (声門下)
+    double A_sub   = 2.839 * 1e-4;
+    double L_sub   = 15.0  * 1e-2;
+    int    N_sub   = Nsecg; // param.txt の section数
+
+    // 3. Vocal Tract (声道)
+    double A_vt    = 2.839 * 1e-4;
+    double L_vt    = 17.5*1e-2;
+       int N_vt    = 10; // param.txt の section数 (Nsecpで使用)
+
+    // --- インピーダンス計算 (L = rho*l/A, C = V / (rho*c^2) = l*A / (rho*c^2)) ---
+    
+    // Inlet parameters (Lui, Cui)
+    // Fortranでは Lui = rho * L_inlet / A_inlet など
+    Lui = rho * L_inlet / (2*A_inlet);
+    Cui = L_inlet * A_inlet / (rho * c_sound * c_sound);
+
+    // Subglottal parameters (Lu, Cu) - 1セクションあたり
+    double dx_sub = L_sub / N_sub;
+    Lu = rho * dx_sub / A_sub;
+    Cu = dx_sub * A_sub / (rho * c_sound * c_sound);
+
+    alpha1 = -2.5e-5*sp.ps+0.185;
+    alpha2 = 1.6e-3*sp.ps+0.6;
+    beta = 1.125e-4 * sp.ps + 0.1375;
+
+    R2 = alpha1/(A_vt*A_vt) * std::sqrt(rho*mu*c_sound);
+    double dx_vt = L_vt / std::max(1, Nsecp); 
+    La = rho * dx_vt / A_vt;
+    Ca = dx_vt * A_vt / (rho * c_sound * c_sound);
+
+
+    // Vocal Tract parameters (La, Ca) - 1セクションあたり
+    // Nsecpはヘッダーで定義 (例: 10とするなら)
+
+    
+    Lr = rho * 1.1 * sqrt(A_vt/M_PI) /A_vt; // 端部補正等の簡易式
+    Rr = alpha2*rho*c_sound/(9*M_PI*M_PI*A_vt); // 仮の粘性抵抗など
+    
 
     std::cout << "[ForceCalculator] initialized: "
               << "nPoints=" << nPoints
@@ -82,41 +140,40 @@ void ForceCalculator::calcForce(double t, int n) {
     } else if (sp.iforce == 0) {
 
         // ==== 1D flow model ====
-        minHarea[n] = *std::min_element(state.harea.begin(), state.harea.end());
+        double minA = findMinHarea();
+        minHarea[n] = minA;
 
-
+        previousUg = (n > 0 && n-1 < (int)Ug.size()) ? Ug[n-1] : 0.0;
+        calcFlowStep(sp.dt, minA * 1e-6);
         // separation point
-        int nsep = findNsep(minHarea[n]) ;
+        int nsep = findNsep(minA) ;
 
-        // 流量 Ug
-        if (minHarea[n] > 0.0) {
-            Ug[n] = std::sqrt(2.0 * sp.ps / sp.rho) * minHarea[n];
-        } else {
-            Ug[n] = 0.0;
-        }
-
+        Ug[n] = currentUg;
 
         // psurf 計算
         std::fill(psurf.begin(), psurf.end(), 0.0);
-        psurf[0] = sp.ps;
+        psurf[0] = currentPg;
 
-        if (minHarea[n] - 0.0 > 1e-3) {
+        if (minA > 1e-6 ) {
             for (int i = 1; i < nsep; i++) {
                 double dx = std::abs(geom.points[geom.surfp[i][ int(nsurfz/2)]].x - geom.points[geom.surfp[i-1][int(nsurfz/2)]].x);
-                double h  = (state.harea[i] + state.harea[i-1]) / (2.0 * geom.zmax);
+                double h  = (state.harea[i] + state.harea[i-1]) / (2.0 * lg);
+                double h_prev = std::max(state.harea[i-1], 1e-6);
+                double h_curr = std::max(state.harea[i], 1e-6);
 
-                double ha1 = std::max(state.harea[i-1], 1e-6);
-                double ha2 = std::max(state.harea[i], 1e-6);
+                double bernoulli_term = 0.5 * rho * currentUg * currentUg * (1.0/(h_prev*h_prev) - 1.0/(h_curr*h_curr));
+                double viscous_term   = 12.0 * mu * dx * currentUg / (lg * pow(h_curr, 3.0)) *1e3;
 
-                psurf[i] = psurf[i-1] + 0.5 * sp.rho * Ug[n] * Ug[n] * (1.0 / (state.harea[i-1]*state.harea[i-1]) - 1.0 / (state.harea[i]*state.harea[i]))
-                                      - 12.0 * sp.mu * dx / (geom.zmax * h * h * h) * Ug[n] * 1e3;
+                psurf[i] = psurf[i-1] + bernoulli_term - viscous_term;
 
             }
+            for (int i = nsep; i < nxsup; ++i) {
+                psurf[i] = Pd[0]; 
+            }
+
         } else {
-            for (int i = 1; i < nsep-1; i++) {
-                psurf[i] = sp.ps;
-            }
-            //std::cout<<"cloze, n = "<< n <<std::endl;
+            for (int i = 1; i < nsep-1; ++i) psurf[i] = currentPg;
+            for (int i = nsep-1; i < nxsup; ++i) psurf[i] = Pd[0];
         }
 
         if ( n%100 == 0){
@@ -247,13 +304,108 @@ void ForceCalculator::calcDis() {
     }
 }
 
+void ForceCalculator::calcFlowStep(double dt, double min_area) {
+    
+    // --- 1. 声門下 (Subglottal) の更新 ---
+    
+    // 圧力の更新 (連続の式: dP/dt = (1/C) * (Uin - Uout))
+    // Pu[0]: Inlet Chamber Pressure
+    // Uu[0]: Flow into Inlet (from Lungs? usually 0 or constant P source)
+    // ここでは Pu[0] を肺圧一定の境界条件とするなら更新しない、あるいは:
+    // Pu[0] += (dt / Cui) * (0.0 - Uu[1]); // もし閉鎖系なら
+    double ug = currentUg;
+    // Pu[1]...Pu[Nsecg]
+    for (int j = 0; j < Nsecg; ++j) {
+
+        Pu[j] += (Uu[j] - Uu[j+1]);
+        //Pu[j] += (dt / C_use) * (Uu[j] - Uu[j+1]);
+    }
+    
+    // 声門直下の圧力ノード (境界)
+    Pu[Nsecg] +=  (Uu[Nsecg] - previousUg);
+    Pu[Nsecg+1] +=  ( previousUg - Ud[0]);
+
+
+    // 流量の更新 (運動量保存: dU/dt = (1/L) * (Pin - Pout - R*U))
+    // Uu[1]: Inlet -> 1st Section
+    // Fortran: Uu(1)=Uu(1)-dt/Lui*(dt/Cui*Pu(1)-Ps) 
+    // これは「P(1) - Ps」の形。
+    // C++:
+    Uu[0]  -= dt / Lui * ( (dt / Cui * Pu[0]) - sp.ps );
+
+    // Fortran: Uu(2)=Uu(2)-dt/(Lui+Lu)*(dt/Cu*Pu(2)-dt/Cui*Pu(1)+R2*Uu(2))
+    Uu[1] -= (dt / (Lui + Lu)) * ( dt / Cu * Pu[1] - dt / Cui * Pu[0] + R2 * Uu[1] );
+
+    for (int j = 2; j < Nsecg + 1; ++j) {
+        Uu[j] -= dt / (2.0 * Lu) * ( dt / Cu * Pu[j] - dt / Cu * Pu[j-1] + R2 * Uu[j] );
+    }
+
+
+    // --- 2. 声門部 (Glottal Flow) の更新 ---
+    if (min_area > 1e-8) {
+        double min_area_m2 = min_area;
+        double lis = geom.xsup * 1e-3; // 仮定値 (Fortran側でd1+d2に相当するか要確認)
+        double lg_m = lg * 1e-3;
+
+        double Lg1 = rho *  0.5 * lis / min_area_m2;
+        double Rk1 = beta * rho / ( min_area_m2 * min_area_m2); // Bernoulli (係数調整)
+        // Fortranでは beta*rho... とある。betaが1.0以上なら損失
+        double Rv1 = 12.0 * mu * lis * lg_m * lg_m / pow(min_area_m2, 3.0);
+
+        // 駆動圧: 声門直下(Pu[last]) - 声道入口(Pd[0])
+        double Ug_old = previousUg; // これを適切に保持しておく
+        double Ug_guess = currentUg; // or previous guess
+
+        // Newton-Raphson
+        for(int k=0; k<100; ++k) { // ループ回数Fortranは100
+            // F(Ug)
+            double F = Rk1 * std::abs(Ug_guess) * Ug_guess
+                    + Rv1 * Ug_guess
+                    + (Lg1 + La + Lu) * (Ug_guess - Ug_old) / dt
+                    + (dt / Ca) * Pu[Nsecg+1]
+                    - (dt / Cu) * Pu[Nsecg];
+            
+            // F'(Ug)
+            double Fd =  2.0 * Rk1 * std::abs(Ug_guess) + Rv1 + (Lg1 + La + Lu) / dt;
+            
+            if(std::abs(F) < 1e-9) break;
+            Ug_guess -= F / Fd;
+        }
+        currentUg = Ug_guess;
+    } else {
+        currentUg = 0.0;
+    }
+
+    // currentPg (声門下圧として外力計算に使う値)
+    currentPg = dt / Cu * Pu[Nsecg];
+
+
+    // --- 3. 声道 (Vocal Tract) の更新 ---
+    // 圧力更新 Pd[0]...
+    Pd[0] += (dt / Ca) * (currentUg - Ud[0]);
+    for(int i=1; i<Nsecp; ++i) {
+        Pd[i] += (dt / Ca) * (Ud[i-1] - Ud[i]);
+    }
+
+    // 流量更新 Ud[0]...
+    for(int i=0; i<Nsecp-1; ++i) {
+        Ud[i] += (dt / La) * (Pd[i] - Pd[i+1]); // 抵抗Raがあれば追加
+    }
+    
+    // 放射端 (Radiation)
+    // Lr * dUd/dt + Rr * Ud = Pd[last] - P_atm(0)
+    // 離散化: (Lr/dt + Rr) * Ud_new = Pd[last] + (Lr/dt)*Ud_old
+    double Z_rad = (La+Lr)/dt + Rr;
+    Ud[Nsecp-1] = (Pd[Nsecp-1] + ((La+Lr)/dt)*Ud[Nsecp-1]) / Z_rad;
+}
+
 double ForceCalculator::findMinHarea() {
     return *std::min_element(state.harea.begin(), state.harea.end());
 }
 
 int ForceCalculator::findNsep(double minH) {
     for (int i = 1; i < geom.nxsup; i++) {
-        if (std::fabs(state.harea[i] - minH) < 1e-16 || state.harea[i] <= 0.0) {
+        if (std::fabs(state.harea[i] - minH) < 1e-8 || state.harea[i] <= 0.0) {
             return i+1;
         }
     }

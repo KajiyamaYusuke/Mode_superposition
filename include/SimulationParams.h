@@ -43,6 +43,7 @@ struct SimulationParams {
     double ps      = 101325.0; // 静圧 [Pa]
     double rho     = 1.225;    // 密度 [kg/m^3] (空気の初期値)
     double mu      = 1.81e-5;  // 動粘性係数 [Pa·s]（参考値）
+    double c_sound = 340.0;
 
     // --- ファイル/ディレクトリパス ---
     fs::path inputDir  = ".";

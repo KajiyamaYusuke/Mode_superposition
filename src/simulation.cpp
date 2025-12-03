@@ -145,7 +145,7 @@ void Simulation::run() {
             // 4. モード力への変換
             fCalc.f2mode();
 
-        double rampDuration = 0.05; // 0.1秒かけて立ち上げ（状況により0.5など長くする）
+        double rampDuration = 0.025; // 0.1秒かけて立ち上げ（状況により0.5など長くする）
         double rampFactor = 1.0;
         
         if (t < rampDuration) {

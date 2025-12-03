@@ -56,6 +56,7 @@ bool SimulationParams::loadFromFile(const fs::path& filename, std::string& err) 
         rho    = std::stod(nextLine());
         mu     = std::stod(nextLine());
         mass   = std::stod(nextLine());
+        c_sound= std::stod(nextLine());
 
         iforce  = std::stoi(nextLine());
         forcef  = std::stod(nextLine());
