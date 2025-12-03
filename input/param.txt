@@ -4,7 +4,7 @@
 # number of points along z-axis(nsurfz)
 18
 # number of step nstep
-10000
+25000
 # output interval nwrite
 20
 # time step for time integration dt
@@ -12,9 +12,9 @@
 # damping coefficient zeta
 0.01
 # contact coefficients kc1 , kc2 and kc3(Pa / m*rad)
-20    6.0000E+3    50
+1    1.0000E+3    300
 # max iteration for contact calculation
-100
+50
 # filename for eigenmode frequencies
 no_mem_freq.txt
 # filename for eignmode vectors
@@ -28,7 +28,7 @@ result
 # kind of external force (iforce)
 0
 # subglottal pressure Ps (Pa)
-2900
+2500
 # air density (kg/m3)
 1.13
 # air viscousity (Pa s)
@@ -45,4 +45,4 @@ result
 # amplitude for force
 -0.001
 # mass of vocal fold (kg)
-2.2747E-3
+1.0425E-3

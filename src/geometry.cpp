@@ -307,7 +307,7 @@ void Geometry::surfArea() {
             }
         }
         //ymid[j] = ymax ;  // j列における最大y値　
-        ymid[j] = ymidconst;
+        ymid[j] = ymidconst-0.1;
     }
 
 
