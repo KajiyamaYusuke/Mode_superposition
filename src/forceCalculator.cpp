@@ -155,29 +155,27 @@ void ForceCalculator::calcForce(double t, int n) {
         psurf[0] = currentPg;
 
         if (minA > 1e-6 ) {
-            for (int i = 1; i < nsep; i++) {
+            for (int i = 1; i < geom.nxsup; i++) {
                 double dx = std::abs(geom.points[geom.surfp[i][ int(nsurfz/2)]].x - geom.points[geom.surfp[i-1][int(nsurfz/2)]].x);
                 double h  = (state.harea[i] + state.harea[i-1]) / (2.0 * lg);
                 double h_prev = std::max(state.harea[i-1], 1e-6);
                 double h_curr = std::max(state.harea[i], 1e-6);
 
-                double bernoulli_term = 0.5 * rho * currentUg * currentUg * (1.0/(h_prev*h_prev) - 1.0/(h_curr*h_curr));
-                double viscous_term   = 12.0 * mu * dx * currentUg / (lg * pow(h_curr, 3.0)) *1e3;
+                double Ugm = currentUg*1e6;
+
+                double bernoulli_term = 0.5 * rho * Ugm * Ugm * (1.0/(h_prev*h_prev) - 1.0/(h_curr*h_curr));
+                double viscous_term   = 12.0 * mu * dx * Ugm / (lg * pow(h, 3.0)) *1e3;
 
                 psurf[i] = psurf[i-1] + bernoulli_term - viscous_term;
 
+                if(psurf[i] > psurf[i-1]){break;}
+
             }
-            for (int i = nsep; i < nxsup; ++i) {
-                psurf[i] = Pd[0]; 
-            }
+
 
         } else {
             for (int i = 1; i < nsep-1; ++i) psurf[i] = currentPg;
             for (int i = nsep-1; i < nxsup; ++i) psurf[i] = Pd[0];
-        }
-
-        if ( n%100 == 0){
-            //std::cout<<" n = "<<n<<" minarea = "<<minHarea[n]<<" psurf[20]="  <<psurf[20]<<std::endl;
         }
 
 
@@ -200,10 +198,6 @@ void ForceCalculator::calcForce(double t, int n) {
 
             }
         }
-        if ( n%200 == 0){
-            //std::cout<<" n = "<<std::setw(4)<<n<<" fx[10][15] = "<<fx[10][15]<<" fy[10][15]="  <<fy[10][15]<<" nsep = "<<nsep<<std::endl;
-        }
-
         
     }
     
