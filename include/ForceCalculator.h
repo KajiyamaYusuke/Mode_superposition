@@ -32,6 +32,8 @@ public:
     std::vector<double> minHarea;  // Minimum area history
     bool contactFlag;
 
+    double currentUg;
+
 private:
     // --- 新規追加: 圧縮性流体モデル用の変数 ---
     // Ishizaka & Flanagan (1972) モデル用
@@ -50,7 +52,7 @@ private:
     
     // 現在のステップのUg
     double previousUg = 0.0;
-    double currentUg;
+    
     double currentPg;   // Subglottal pressure at glottis entry
     double currentPout; // Radiation pressure
 

@@ -1,6 +1,7 @@
 
 #define _USE_MATH_DEFINES  
 #include "Simulation.h"
+#include "wavwrite.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -102,7 +103,8 @@ void Simulation::run() {
     num++;
     std::cout << "[Simulation] Output step 0 (Initial State). check this if bumpy." << std::endl;
 
-
+    std::vector<double> soundSignal;
+        soundSignal.reserve(params.nstep);
 
     for (int n = 0
         ; n < params.nstep; n++) {
@@ -219,8 +221,10 @@ void Simulation::run() {
             writeVTK(num, geom, state, "../result", 200);
             num++;
         }
-
+        soundSignal.push_back(fCalc.currentUg);
     }
+
+    WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
 
     std::cout << "[Simulation] Run complete." << std::endl;
 } 
