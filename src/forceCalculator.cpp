@@ -144,7 +144,7 @@ void ForceCalculator::calcForce(double t, int n) {
         minHarea[n] = minA;
 
         previousUg = (n > 0 && n-1 < (int)Ug.size()) ? Ug[n-1] : 0.0;
-        calcFlowStep(sp.dt, minA * 1e-6);
+        calcFlowStep(t, sp.dt, minA * 1e-6);
         // separation point
         int nsep = findNsep(minA) ;
 
@@ -298,15 +298,21 @@ void ForceCalculator::calcDis() {
     }
 }
 
-void ForceCalculator::calcFlowStep(double dt, double min_area) {
+void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     
     // --- 1. 声門下 (Subglottal) の更新 ---
     
-    // 圧力の更新 (連続の式: dP/dt = (1/C) * (Uin - Uout))
-    // Pu[0]: Inlet Chamber Pressure
-    // Uu[0]: Flow into Inlet (from Lungs? usually 0 or constant P source)
-    // ここでは Pu[0] を肺圧一定の境界条件とするなら更新しない、あるいは:
-    // Pu[0] += (dt / Cui) * (0.0 - Uu[1]); // もし閉鎖系なら
+    double rampDuration = 0.15; // 50msかけて立ち上げる
+    double rampFactor = 1.0;
+    
+    if (t < rampDuration) {
+        // Cosine Ramp (滑らか)
+        rampFactor = 0.5 * (1.0 - std::cos(M_PI * t / rampDuration));
+    }
+
+    // --- ランプ適用 ---
+    // sp.ps (固定パラメータ) に rampFactor をかけて「現在の肺圧」を作る
+    double currentLungPressure = sp.ps * rampFactor;
     double ug = currentUg;
     // Pu[1]...Pu[Nsecg]
     for (int j = 0; j < Nsecg; ++j) {
@@ -325,7 +331,7 @@ void ForceCalculator::calcFlowStep(double dt, double min_area) {
     // Fortran: Uu(1)=Uu(1)-dt/Lui*(dt/Cui*Pu(1)-Ps) 
     // これは「P(1) - Ps」の形。
     // C++:
-    Uu[0]  -= dt / Lui * ( (dt / Cui * Pu[0]) - sp.ps );
+    Uu[0]  -= dt / Lui * ( (dt / Cui * Pu[0]) - currentLungPressure );
 
     // Fortran: Uu(2)=Uu(2)-dt/(Lui+Lu)*(dt/Cu*Pu(2)-dt/Cui*Pu(1)+R2*Uu(2))
     Uu[1] -= (dt / (Lui + Lu)) * ( dt / Cu * Pu[1] - dt / Cui * Pu[0] + R2 * Uu[1] );

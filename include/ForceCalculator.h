@@ -35,7 +35,7 @@ public:
 private:
     // --- 新規追加: 圧縮性流体モデル用の変数 ---
     // Ishizaka & Flanagan (1972) モデル用
-    void calcFlowStep(double dt, double current_min_area); // FortranのcalcFlow相当
+    void calcFlowStep(double t, double dt, double current_min_area); // FortranのcalcFlow相当
 
     // 状態変数 (Previous step values)
     // Nsecg: subglottal sections, Nsecp: supraglottal sections

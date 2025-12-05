@@ -145,18 +145,18 @@ void Simulation::run() {
             // 4. モード力への変換
             fCalc.f2mode();
 
-        double rampDuration = 0.025; // 0.1秒かけて立ち上げ（状況により0.5など長くする）
-        double rampFactor = 1.0;
+        // double rampDuration = 0.025; // 0.1秒かけて立ち上げ（状況により0.5など長くする）
+        // double rampFactor = 1.0;
         
-        if (t < rampDuration) {
-            rampFactor = t / rampDuration; 
-            // 例: t=0なら0倍, t=0.05なら0.5倍, t=0.1以上なら1.0倍
-        }
+        // if (t < rampDuration) {
+        //     rampFactor = t / rampDuration; 
+        //     // 例: t=0なら0倍, t=0.05なら0.5倍, t=0.1以上なら1.0倍
+        // }
 
-        // 計算されたモード力すべてに係数をかける
-        for(int i=0; i<mdata.nModes; ++i) {
-            fCalc.fi[i] *= rampFactor;
-        }
+        // // 計算されたモード力すべてに係数をかける
+        // for(int i=0; i<mdata.nModes; ++i) {
+        //     fCalc.fi[i] *= rampFactor;
+        // }
 
             // 5. 時間積分（RK4）
 /*             for (int i = 0; i < mdata.nModes; i++) {
