@@ -96,8 +96,8 @@ void ForceCalculator::initialize() {
     } else {
         // 声道がない場合、計算に使わないがゼロ除算回避のため安全な値を入れておく
         // または calcFlowStep で分岐する
-        La = 1.0; // ダミー
-        Ca = 1.0e20; // 非常に大きくすることで圧力変動をゼロにする(大気開放)
+        La = 1e-1; // ダミー
+        Ca = 1.0e30; // 非常に大きくすることで圧力変動をゼロにする(大気開放)
         Lr = 0.0;
         Rr = 0.0;
     }
@@ -390,14 +390,22 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
 
     // --- 3. 声道 (Vocal Tract) の更新 ---
     // 圧力更新 Pd[0]...
-    Pd[0] += (dt / Ca) * (currentUg - Ud[0]);
-    for(int i=1; i<Nsecp; ++i) {
-        Pd[i] += (dt / Ca) * (Ud[i-1] - Ud[i]);
-    }
 
-    // 流量更新 Ud[0]...
-    for(int i=0; i<Nsecp-1; ++i) {
-        Ud[i] += (dt / La) * (Pd[i] - Pd[i+1]); // 抵抗Raがあれば追加
+    if(Lr < 1e-8){
+        for (int i = 0; i < Nsecp; i++) {
+            Pd[i] = 0.0;     // 圧力ゼロ（大気）
+            Ud[i] = currentUg; // 流量はすべて Ug と同じ
+        }
+    }else{
+        Pd[0] += (dt / Ca) * (currentUg - Ud[0]);
+        for(int i=1; i<Nsecp; ++i) {
+            Pd[i] += (dt / Ca) * (Ud[i-1] - Ud[i]);
+        }
+
+        // 流量更新 Ud[0]...
+        for(int i=0; i<Nsecp-1; ++i) {
+            Ud[i] += (dt / La) * (Pd[i] - Pd[i+1]); // 抵抗Raがあれば追加
+        }
     }
     
     // 放射端 (Radiation)
