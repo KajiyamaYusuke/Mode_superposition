@@ -60,13 +60,13 @@ void ForceCalculator::initialize() {
     double L_inlet = 10.0  * 1e-2; // cm -> m
     
     // 2. Subglottal Tract (声門下)
-    double A_sub   = 2.839 * 1e-4;
-    double L_sub   = 15.0  * 1e-2;
+    double A_sub   = M_PI * std::pow((2.5 * 1e-2) / 2.0, 2.0);
+    double L_sub   = 25.0  * 1e-2;
     int    N_sub   = Nsecg; // param.txt の section数
 
     // 3. Vocal Tract (声道)
     double A_vt    = 2.839 * 1e-4;
-    double L_vt    = 17.5*1e-2;
+    double L_vt    = 0;
        int N_vt    = 10; // param.txt の section数 (Nsecpで使用)
 
     // --- インピーダンス計算 (L = rho*l/A, C = V / (rho*c^2) = l*A / (rho*c^2)) ---
@@ -86,23 +86,30 @@ void ForceCalculator::initialize() {
     beta = 1.125e-4 * sp.ps + 0.1375;
 
     R2 = alpha1/(A_vt*A_vt) * std::sqrt(rho*mu*c_sound);
-    double dx_vt = L_vt / std::max(1, Nsecp); 
-    La = rho * dx_vt / A_vt;
-    Ca = dx_vt * A_vt / (rho * c_sound * c_sound);
-
-
-    // Vocal Tract parameters (La, Ca) - 1セクションあたり
-    // Nsecpはヘッダーで定義 (例: 10とするなら)
-
-    
-    Lr = rho * 1.1 * sqrt(A_vt/M_PI) /A_vt; // 端部補正等の簡易式
-    Rr = alpha2*rho*c_sound/(9*M_PI*M_PI*A_vt); // 仮の粘性抵抗など
+    if (L_vt > 1e-6) {
+        double dx_vt = L_vt / std::max(1, Nsecp); 
+        La = rho * dx_vt / A_vt;
+        Ca = dx_vt * A_vt / (rho * c_sound * c_sound);
+        
+        Lr = rho * 1.1 * sqrt(A_vt/M_PI) /A_vt;
+        Rr = alpha2*rho*c_sound/(9*M_PI*M_PI*A_vt);
+    } else {
+        // 声道がない場合、計算に使わないがゼロ除算回避のため安全な値を入れておく
+        // または calcFlowStep で分岐する
+        La = 1.0; // ダミー
+        Ca = 1.0e20; // 非常に大きくすることで圧力変動をゼロにする(大気開放)
+        Lr = 0.0;
+        Rr = 0.0;
+    }
     
 
     std::cout << "[ForceCalculator] initialized: "
               << "nPoints=" << nPoints
               << ", nModes=" << nModes
-              << ", nxsup=" << nxsup << std::endl;
+              << ", nxsup=" << nxsup 
+              << ", L_sub=" << L_sub
+              << ", L_vt=" << L_sub
+              << std::endl;
 }
 
 void ForceCalculator::calcForce(double t, int n) {
@@ -302,7 +309,7 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     
     // --- 1. 声門下 (Subglottal) の更新 ---
     
-    double rampDuration = 0.15; // 50msかけて立ち上げる
+    double rampDuration = 0.05; // 50msかけて立ち上げる
     double rampFactor = 1.0;
     
     if (t < rampDuration) {
@@ -313,6 +320,7 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     // --- ランプ適用 ---
     // sp.ps (固定パラメータ) に rampFactor をかけて「現在の肺圧」を作る
     double currentLungPressure = sp.ps * rampFactor;
+
     double ug = currentUg;
     // Pu[1]...Pu[Nsecg]
     for (int j = 0; j < Nsecg; ++j) {
