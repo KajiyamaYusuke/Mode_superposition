@@ -1,18 +1,18 @@
 # parameters for 3D vocal fold model ver1.0
 # number of modes
-100
+98
 # number of points along z-axis(nsurfz)
 18
 # number of step nstep
-25000
+7000
 # output interval nwrite
 20
 # time step for time integration dt
 1.0E-5
 # damping coefficient zeta
-0.03
+0.1
 # contact coefficients kc1 , kc2 and kc3(Pa / m*rad)
-10    6.0000E+3    300
+1    100    300
 # max iteration for contact calculation
 100
 # filename for eigenmode frequencies
@@ -28,13 +28,13 @@ result
 # kind of external force (iforce)
 0
 # subglottal pressure Ps (Pa)
-2200
+1200
 # air density (kg/m3)
 1.13
 # air viscousity (Pa s)
 1.80000E-5
 # mass of vocal fold (kg)
-1.0425E-3
+1.352E-3
 # verocity of sounds (m/s)
 343.0
 
