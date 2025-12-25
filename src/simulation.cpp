@@ -124,7 +124,7 @@ void Simulation::run() {
             }
         }
 
-        fCalc.contactForce();
+        //fCalc.contactForce();
 
 
 
@@ -176,8 +176,8 @@ void Simulation::run() {
             } */
             
             // Newmark parameters (average acceleration)
-            const double beta  = 0.25;
-            const double gamma = 0.5;
+            const double beta  = 0.275625;
+            const double gamma = 0.55;
 
 
             for (int i = 0; i < mdata.nModes; ++i) {
@@ -207,6 +207,9 @@ void Simulation::run() {
             // calculate dissipation force for contact
             fCalc.contactFlag = false;
             fCalc.calcDis();
+            if (fCalc.contactFlag && fCalc.max_force_diff < 1.0e-6) { 
+                break; 
+            }
 
             if (!fCalc.contactFlag) break;  // contactFlg == false の場合はループを抜ける
         }
