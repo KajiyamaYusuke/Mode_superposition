@@ -32,6 +32,8 @@ public:
     std::vector<double> minHarea;  // Minimum area history
     bool contactFlag;
 
+    std::vector<double> Pd; // Downstream (Vocal Tract) pressure
+
     double currentUg;
     double max_force_diff;
 
@@ -48,7 +50,7 @@ private:
     std::vector<double> Uu; // Upstream (Trachea) flow
     std::vector<double> Pu; // Upstream (Trachea) pressure
     std::vector<double> Ud; // Downstream (Vocal Tract) flow
-    std::vector<double> Pd; // Downstream (Vocal Tract) pressure
+    
 
     
     // 現在のステップのUg

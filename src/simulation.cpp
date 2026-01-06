@@ -65,9 +65,13 @@ void Simulation::run() {
     std::ofstream fu("../output/displace.dat");
     std::ofstream fp("../output/pressure.dat");
 
+    std::ofstream fpv("../output/pressure_vt.dat");
+
     fa << "# x[m]  area[m^2]\n";
     fu << "# x[m]  displace\n";
     fp << "# x[m]  pressure[Pa]\n"; 
+
+    fpv << "# x[m]  pressure[Pa]\n"; 
 
     std::vector<double> zeta(mdata.nModes, 0);
     double omega1 = 50 * 2 * M_PI;
@@ -224,7 +228,14 @@ void Simulation::run() {
             writeVTK(num, geom, state, "../result", 200);
             num++;
         }
-        soundSignal.push_back(fCalc.currentUg);
+
+
+        if ( n%20 == 0){
+            fpv <<std::setw(4)<< n;
+            fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
+            fpv << "\n";
+        }
+        soundSignal.push_back(fCalc.Pd[9]);
     }
 
     WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
