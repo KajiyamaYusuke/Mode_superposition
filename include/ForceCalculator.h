@@ -33,7 +33,7 @@ public:
     bool contactFlag;
 
     std::vector<double> Pd; // Downstream (Vocal Tract) pressure
-
+    std::vector<double> Ud; // Downstream (Vocal Tract) flow
     double currentUg;
     double max_force_diff;
 
@@ -49,7 +49,7 @@ private:
 
     std::vector<double> Uu; // Upstream (Trachea) flow
     std::vector<double> Pu; // Upstream (Trachea) pressure
-    std::vector<double> Ud; // Downstream (Vocal Tract) flow
+
     
 
     

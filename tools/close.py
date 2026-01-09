@@ -10,12 +10,12 @@ areas = harea[:, 1:]
 row_min = np.min(areas, axis=1)
 
 # --- 3. 正しい時間軸の作成 ---
-dt = 0.0002
+dt = 0.00005
 N_total = len(row_min)
 t = np.arange(N_total) * dt 
 
 # --- 4. 分析区間の抽出 ---
-mask = (t >= 0.1) & (t <= 0.14)
+mask = (t >= 0.1) & (t <= 0.5)
 y = row_min[mask]      # ★ここではまだ生の断面積（正の値）のままにする
 t_seg = t[mask]
 
@@ -83,7 +83,7 @@ else:
 
     CQ_list = np.array(CQ_list)
     print(f"平均 Closed Quotient: {np.mean(CQ_list):.3f}")
-    print(f"Closed Quotient 分散: {np.std(CQ_list):.3f}")
+    # print(f"Closed Quotient 分散: {np.std(CQ_list):.3f}")
 
 # --- プロット確認 ---
 plt.figure(figsize=(10, 6))
