@@ -56,13 +56,13 @@ void ForceCalculator::initialize() {
 
     c_sound = sp.c_sound;
 
-    double r_chamber = 15.0 * 1e-2; // 半径 15cm -> m
+    double r_chamber = 8.0 * 1e-2; // 半径 15cm -> m
     double A_inlet = M_PI * r_chamber * r_chamber;
-    double L_inlet = 50.0  * 1e-2; // cm -> m
+    double L_inlet = 17.5  * 1e-2; // cm -> m
     
     // 2. Subglottal Tract (声門下)
     double A_sub   = M_PI * std::pow((2.5 * 1e-2) / 2.0, 2.0);
-    double L_sub   = 25.0  * 1e-2;
+    double L_sub   = 15.0  * 1e-2;
     int    N_sub   = Nsecg; // param.txt の section数
 
     // 3. Vocal Tract (声道)
@@ -345,12 +345,16 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     
     // --- 1. 声門下 (Subglottal) の更新 ---
     
-    double rampDuration = 0.05; // 50msかけて立ち上げる
+    double rampDuration = 0.1; // 50msかけて立ち上げる
     double rampFactor = 1.0;
     
     if (t < rampDuration) {
         // Cosine Ramp (滑らか)
         rampFactor = 0.5 * (1.0 - std::cos(M_PI * t / rampDuration));
+    }else if (t > 0.15) {
+        rampFactor = 0.5 * (1.0 + std::cos(M_PI * (t - 0.15 )/ 0.1));
+    }else{
+        rampFactor = 1.0;
     }
 
     // --- ランプ適用 ---
