@@ -66,8 +66,8 @@ void ForceCalculator::initialize() {
     int    N_sub   = Nsecg; // param.txt の section数
 
     // 3. Vocal Tract (声道)
-    double A_vt    = M_PI * std::pow((2.5 * 1e-2) / 2.0, 2.0);
-    double L_vt    = 17.5* 1e-2;
+    double A_vt    = 0;
+    double L_vt    = 0;
        int N_vt    = 10; // param.txt の section数 (Nsecpで使用)
     const double A_vt_thresh = 1e-12;
     hasVocalTract = (L_vt > 1e-6) && (A_vt > A_vt_thresh);
