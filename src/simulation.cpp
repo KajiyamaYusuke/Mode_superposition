@@ -12,16 +12,10 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    //geom.loadFromVTK("../input/M5/M5_mode_T4.vtu");
-    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_soft.vtu");
-    //geom.loadFromVTK("../input/old/no_mem_mode.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b5c3.vtu");
 
-    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_renewal.nas",13,18);
-    //geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",69,66);
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
-    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_old_c.nas",21,30);
 
-    //geom.surfExtract("/home/kajiyama/code/simulation/input/old/surface.txt", 20);
     geom.surfArea();
     geom.print();
  
@@ -32,10 +26,10 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_soft.vtu", geom);
-    //mdata.loadFromVTU_old("../input/old/no_mem_mode.vtu", geom);
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_soft.txt");
-    //mdata.loadFreqDamping("../input/old/no_mem_frequency.txt");
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b5c3.vtu", geom);
+
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b5c3.txt");
+
 
 
     mdata.normalizeModes( params.mass, geom);
@@ -64,10 +58,14 @@ void Simulation::run() {
     std::ofstream fa("../output/area.dat");
     std::ofstream fu("../output/displace.dat");
     std::ofstream fp("../output/pressure.dat");
+    std::ofstream fpv("../output/pressure_vt.dat");
+    std::ofstream fuv("../output/airflow_vt.dat");
 
     fa << "# x[m]  area[m^2]\n";
     fu << "# x[m]  displace\n";
     fp << "# x[m]  pressure[Pa]\n"; 
+    fpv << "# x[m]  pressure[Pa]\n";
+    fuv << "# x[m]  airflow[l/s]\n";
 
     std::vector<double> zeta(mdata.nModes, 0);
     double omega1 = 50 * 2 * M_PI;
@@ -117,18 +115,13 @@ void Simulation::run() {
 
         fCalc.calcForce(t, n);
 
-        if (n % 100 == 0) {
-            fCalc.outputForceVectors(n);
-            for (int i = 0; i<25; ++i){
-                //std::cout<<"i = "<<i<<"p = "<<fCalc.psurf[i]<<std::endl;
-            }
-        }
+
 
         //fCalc.contactForce();
 
 
 
-        if ( n%20 == 0){
+        if ( n%5 == 0){
             fa <<std::setw(4)<< n;
             fp <<std::setw(4)<< n;
             for (int i = 0; i < geom.nxsup; ++i) {
@@ -224,7 +217,15 @@ void Simulation::run() {
             writeVTK(num, geom, state, "../result", 200);
             num++;
         }
-        soundSignal.push_back(fCalc.currentUg);
+        if ( n%5== 0){
+            fpv <<std::setw(4)<< n;
+            fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
+            fpv << "\n";
+            fuv <<std::setw(4)<< n;
+            fuv << " " <<std::setw(8)<< fCalc.Ud[9] << " ";
+            fuv << "\n";
+        }
+        soundSignal.push_back(fCalc.Pd[9]);
     }
 
     WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
