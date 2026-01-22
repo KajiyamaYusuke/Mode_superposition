@@ -1,69 +1,90 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks, butter, filtfilt
-from scipy.fft import fft, fftfreq
+from scipy.signal import find_peaks
 
-# 1. データ読み込み
-harea = np.loadtxt("../output/area.dat")
-labels = harea[:, 0]
-values = harea[:, 1:]
+# =========================
+# 設定
+# =========================
+filename = "../output/pressure_vt.dat"  # ファイルパス
+sim_dt = 1.0e-5
+output_interval = 5
+dt = sim_dt * output_interval
 
-x = labels * 1e-5  # 秒
-row_min = np.min(values, axis=1)
+# =========================
+# データ処理
+# =========================
+try:
+    data = np.loadtxt(filename, comments='#')
+    pressure = data[:, 1]
+    
+    # 後半データ切り出し・窓関数・FFT
+    start_idx = int(len(pressure) * 0.5)
+    valid_pressure = pressure[start_idx:]
+    valid_pressure = valid_pressure - np.mean(valid_pressure)
+    window = np.hanning(len(valid_pressure))
+    
+    N = len(valid_pressure)
+    freq = np.fft.rfftfreq(N, d=dt)
+    fft_val = np.fft.rfft(valid_pressure * window)
+    
+    # dB変換
+    p0 = 20e-6
+    db_amplitude = 20 * np.log10(np.abs(fft_val) / N * 2 + 1e-12 / p0)
+    
+    # =========================
+    # ★重要：ロバストなF0検出
+    # =========================
+    # 1. 低周波ノイズ(50Hz以下)を除外した範囲を作る
+    min_freq = 50.0
+    mask = freq > min_freq
+    masked_freq = freq[mask]
+    masked_db   = db_amplitude[mask]
+    
+    # 2. ピーク（山）をすべて探す
+    #    条件: 最大値から 20dB 以内にあるピークのみを候補とする
+    max_db = np.max(masked_db)
+    threshold = max_db - 20.0 
+    
+    peaks, _ = find_peaks(masked_db, height=threshold, distance=5)
+    
+    f0 = 0.0
+    if len(peaks) > 0:
+        # 3. 見つかった候補の中で「一番周波数が低いもの」を選ぶ
+        # peaks はインデックスのリストなので、[0]番目が最低周波数
+        first_peak_idx = peaks[0]
+        f0 = masked_freq[first_peak_idx]
+        f0_db = masked_db[first_peak_idx]
+        
+        # 確認用: 最大ピークがF0でない場合の警告
+        max_idx = np.argmax(masked_db)
+        if first_peak_idx != max_idx:
+            print(f"【注意】最大ピーク({masked_freq[max_idx]:.1f}Hz)はF0ではありません。")
+            print(f"倍音の方が強いですが、正しくF0({f0:.1f}Hz)を検出しました。")
+        else:
+            print(f"F0検出: {f0:.1f} Hz (最大ピークと一致)")
+            
+    else:
+        print("有効なピークが見つかりませんでした。")
 
-t_start = 0.1
-t_end   = 0.2
-idx = np.where((x >= t_start) & (x <= t_end))[0]
+    # =========================
+    # プロット
+    # =========================
+    plt.figure(figsize=(10, 5))
+    plt.plot(freq, db_amplitude, label='Spectrum')
+    plt.xlim(0, 3000)
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("SPL [dB]")
+    plt.grid(True)
+    plt.title(f"Fundamental Frequency: {f0:.1f} Hz")
+    
+    # F0の位置を赤丸で表示
+    if f0 > 0:
+        plt.plot(f0, f0_db, 'ro', markersize=10, label='Detected F0')
+        # その他の候補（倍音など）を青バツで表示
+        plt.plot(masked_freq[peaks], masked_db[peaks], 'bx', label='Harmonics')
+        
+    plt.legend()
+    plt.show()
 
-x_seg = x[idx]
-row_seg = row_min[idx]
-
-# 2. ノイズ除去（低域通過フィルタ例）
-fs = 1 / (x_seg[1] - x_seg[0])  # サンプリング周波数
-nyq = fs / 2
-cutoff = 1000  # Hz, 音声なら 1 kHz 程度まで残す
-b, a = butter(4, cutoff / nyq, btype='low')
-row_seg_smooth = filtfilt(b, a, row_seg)
-
-# 3. FFT
-N = len(row_seg_smooth)
-yf = fft(row_seg_smooth)
-xf = fftfreq(N, d=1/fs)
-
-# 正の周波数だけ
-pos = xf > 0
-xf = xf[pos]
-yf = np.abs(yf[pos])
-
-peak_freq = xf[np.argmax(yf)]
-print(f"FFTでの主要周波数: {peak_freq:.2f} Hz")
-
-# 4. ピーク検出（スムーズ化波形で）
-peaks, _ = find_peaks(row_seg_smooth, prominence=0.001, distance=int(fs/peak_freq/2))
-peak_times = x_seg[peaks]
-periods = np.diff(peak_times)
-avg_period = np.mean(periods)
-frequency = 1 / avg_period
-
-print(f"ピーク間平均周波数: {frequency:.2f} Hz")
-
-# 5. 可視化
-plt.figure(figsize=(12,5))
-plt.plot(x_seg, row_seg, alpha=0.5, label="raw")
-plt.plot(x_seg, row_seg_smooth, label="smoothed")
-plt.plot(peak_times, row_seg_smooth[peaks], "ro", label="peaks")
-plt.xlabel("time [s]")
-plt.ylabel("area")
-plt.title("Glottal area with peaks")
-plt.grid(True)
-plt.legend()
-plt.show()
-
-# FFTスペクトル確認
-plt.figure(figsize=(10,4))
-plt.plot(xf, yf)
-plt.xlabel("Frequency [Hz]")
-plt.ylabel("Amplitude")
-plt.title("FFT (0.15-0.20 s)")
-plt.grid(True)
-plt.show()
+except Exception as e:
+    print(f"Error: {e}")

@@ -32,7 +32,10 @@ public:
     std::vector<double> minHarea;  // Minimum area history
     bool contactFlag;
 
+    std::vector<double> Pd; // Downstream (Vocal Tract) pressure
+    std::vector<double> Ud; // Downstream (Vocal Tract) flow
     double currentUg;
+    double max_force_diff;
 
 private:
     // --- 新規追加: 圧縮性流体モデル用の変数 ---
@@ -46,8 +49,8 @@ private:
 
     std::vector<double> Uu; // Upstream (Trachea) flow
     std::vector<double> Pu; // Upstream (Trachea) pressure
-    std::vector<double> Ud; // Downstream (Vocal Tract) flow
-    std::vector<double> Pd; // Downstream (Vocal Tract) pressure
+
+
 
     
     // 現在のステップのUg
