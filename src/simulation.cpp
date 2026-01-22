@@ -64,10 +64,14 @@ void Simulation::run() {
     std::ofstream fa("../output/area.dat");
     std::ofstream fu("../output/displace.dat");
     std::ofstream fp("../output/pressure.dat");
+    std::ofstream fpv("../output/pressure_vt.dat");
+    std::ofstream fuv("../output/airflow_vt.dat");
 
     fa << "# x[m]  area[m^2]\n";
     fu << "# x[m]  displace\n";
     fp << "# x[m]  pressure[Pa]\n"; 
+    fpv << "# x[m]  pressure[Pa]\n";
+    fuv << "# x[m]  airflow[l/s]\n";
 
     std::vector<double> zeta(mdata.nModes, 0);
     double omega1 = 50 * 2 * M_PI;
@@ -117,18 +121,13 @@ void Simulation::run() {
 
         fCalc.calcForce(t, n);
 
-        if (n % 100 == 0) {
-            fCalc.outputForceVectors(n);
-            for (int i = 0; i<25; ++i){
-                //std::cout<<"i = "<<i<<"p = "<<fCalc.psurf[i]<<std::endl;
-            }
-        }
 
-        fCalc.contactForce();
+
+        //fCalc.contactForce();
 
 
 
-        if ( n%20 == 0){
+        if ( n%5 == 0){
             fa <<std::setw(4)<< n;
             fp <<std::setw(4)<< n;
             for (int i = 0; i < geom.nxsup; ++i) {
@@ -207,11 +206,14 @@ void Simulation::run() {
             // calculate dissipation force for contact
             fCalc.contactFlag = false;
             fCalc.calcDis();
+            if (fCalc.contactFlag && fCalc.max_force_diff < 1.0e-6) { 
+                break; 
+            }
 
             if (!fCalc.contactFlag) break;  // contactFlg == false の場合はループを抜ける
         }
 
-        if (n%20 ==0){
+        if (n%5 ==0){
             fu << n *1e-5 << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
         }
     
@@ -221,7 +223,15 @@ void Simulation::run() {
             writeVTK(num, geom, state, "../result", 200);
             num++;
         }
-        soundSignal.push_back(fCalc.currentUg);
+        if ( n%5== 0){
+            fpv <<std::setw(4)<< n;
+            fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
+            fpv << "\n";
+            fuv <<std::setw(4)<< n;
+            fuv << " " <<std::setw(8)<< fCalc.Ud[9] << " ";
+            fuv << "\n";
+        }
+        soundSignal.push_back(fCalc.Pd[9]);
     }
 
     WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
