@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T4_d2_b5c3.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T4_d2_b20c3.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T4_d2.nas",69,70);
 
@@ -25,9 +25,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T4_d2_b5c3.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T4_d2_b20c3.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T4_d2_b5c3.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T4_d2_b20c3.txt");
 
     mdata.normalizeModes( params.mass, geom);
     
@@ -214,7 +214,8 @@ void Simulation::run() {
         state.uf2u();
 
         if( n % 20 == 0){
-            writeVTK(num, geom, state, "../result", 200);
+            writeVTK(num, geom, state, "../result", 20);
+            //std::cout<<n<<"\n";
             num++;
         }
         if ( n%5== 0){

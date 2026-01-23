@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 # =========================
 # 設定
 # =========================
-filename = "../output/pressure.dat"   # ファイル名を合わせました
+filename = "../output/pressure_vt.dat"   # ファイル名を合わせました
 sim_dt = 1.0e-5             # シミュレーションdt
-output_interval = 20        # 出力間隔
+output_interval = 5       # 出力間隔
 dt = sim_dt * output_interval  # サンプリング周期
 
 # =========================
@@ -38,6 +38,8 @@ N = len(valid_pressure)
 freq = np.fft.rfftfreq(N, d=dt)
 fft_val = np.fft.rfft(valid_pressure_windowed)
 amplitude = np.abs(fft_val) / N * 2
+p0 = 20e-6 
+db_amplitude = 20 * np.log10(amplitude / p0)
 
 # 1. 探索範囲 (20Hz以上)
 mask = freq > 20
@@ -77,28 +79,21 @@ else:
 
 print(f"Detected Fundamental Frequency (F0): {f0:.2f} Hz")
 
-# =========================
-# プロット
-# =========================
-fig, axes = plt.subplots(2, 1, figsize=(10, 8))
+fig, ax = plt.subplots(figsize=(10, 6))
 
-# 1. 時間波形（計算した最小値プロット）
-axes[0].plot(steps, pressure)
-axes[0].set_title("Time Domain (Min Pressure Waveform)")
-axes[0].set_xlabel("Step")
-axes[0].set_ylabel("Pressure [Pa]")
-axes[0].grid()
-# 解析に使った範囲を赤線で表示
-axes[0].axvline(steps[start_idx], color='r', linestyle='--', label='FFT Start')
-axes[0].legend()
+# FFT結果のプロット
+ax.plot(freq, db_amplitude)
 
-# 2. FFT結果
-axes[1].plot(freq, amplitude)
-axes[1].set_title("Frequency Domain (FFT)")
-axes[1].set_xlabel("Frequency [Hz]")
-axes[1].set_ylabel("Amplitude")
-axes[1].set_xlim(0, 2000) # 見たい範囲
-axes[1].grid()
+# タイトルやラベルの設定
+ax.set_title(f"Frequency Domain (F0 = {f0:.2f} Hz)")
+ax.set_xlabel("Frequency [Hz]")
+ax.set_ylabel("SPL [dB]")
+
+# 見たい範囲（0Hz ～ 2000Hz）
+ax.set_xlim(0, 6000) 
+
+# グリッド表示
+ax.grid(which='both', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
 plt.show()
