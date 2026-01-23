@@ -80,7 +80,7 @@ void ForceCalculator::initialize() {
 
     // Subglottal parameters (Lu, Cu) - 1セクションあたり
     double dx_sub = L_sub / N_sub;
-    Lu = rho * dx_sub / A_sub;
+    Lu = rho * dx_sub / (2*A_sub);
     Cu = dx_sub * A_sub / (rho * c_sound * c_sound);
 
     alpha1 = -2.5e-5*sp.ps+0.185;
