@@ -27,6 +27,38 @@ MIN_FREQ = 50.0     # ノイズ/DC成分除外用の最低周波数 [Hz]
 # 2. 関数定義
 # ==========================================
 
+def get_f0_robust(xf, yf, min_freq=50, amp_threshold_ratio=0.2):
+    """
+    倍音の方が強くてもF0を正しく検出する関数
+    
+    xf: 周波数軸配列
+    yf: 振幅スペクトル配列
+    min_freq: これ以下の周波数は無視（ノイズ対策）
+    amp_threshold_ratio: 最大振幅の何割以上を「主要なピーク」とみなすか (例: 0.2 = 20%)
+    """
+    # 1. 最大振幅で正規化
+    max_amp = np.max(yf)
+    if max_amp == 0: return 0.0
+    yf_norm = yf / max_amp
+    
+    # 2. ピークを検出
+    # height: 最大値の20%以上の高さがあるピークだけ抽出
+    peaks, _ = find_peaks(yf_norm, height=amp_threshold_ratio)
+    
+    # 3. ピークの周波数をリスト化
+    peak_freqs = xf[peaks]
+    
+    # 4. 指定した最低周波数 (min_freq) 以下のノイズを除外
+    valid_freqs = peak_freqs[peak_freqs > min_freq]
+    
+    if len(valid_freqs) > 0:
+        # 5. 有効なピークの中で「最も周波数が低いもの」をF0とする
+        f0 = np.min(valid_freqs)
+        return f0
+    else:
+        # ピークが見つからない場合は、仕方なく最大値の周波数を返すか0を返す
+        return xf[np.argmax(yf)]
+
 def update_pressure(filepath, ps_value):
     """param.txt の Ps を書き換える"""
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -106,9 +138,7 @@ def analyze_oscillation(filepath, dt=1.0e-5):
         if not valid_peaks:
             return False, amplitude, 0.0
             
-        # 最も強いピークをF0とする
-        valid_peaks.sort(key=lambda x: x[1], reverse=True) # 強度順にソート
-        f0_freq = valid_peaks[0][0]
+        f0_freq = get_f0_robust(xf, yf)
         
         # ここまで来たら「振幅十分」かつ「明確なピークあり」
         return True, amplitude, f0_freq
