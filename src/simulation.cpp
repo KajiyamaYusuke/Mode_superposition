@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b5c3.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b20c6.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
 
@@ -26,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b5c3.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b20c6.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b5c3.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b20c6.txt");
 
 
 
