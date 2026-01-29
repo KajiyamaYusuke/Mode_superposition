@@ -143,7 +143,7 @@ try:
         update_pressure(PARAM_FILE, mid)
         
         # 2. シミュレーション実行 (エラー時は表示されるよう設定)
-        ret = subprocess.run([EXE_PATH])
+        ret = subprocess.run([EXE_PATH], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         if ret.returncode != 0:
             print("Simulation Failed.")
