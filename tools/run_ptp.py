@@ -2,6 +2,8 @@ import os
 import subprocess
 import shutil
 import numpy as np
+from scipy.fft import fft, fftfreq
+from scipy.signal import find_peaks, get_window
 
 # ==========================================
 # 1. 設定
@@ -9,23 +11,24 @@ import numpy as np
 EXE_PATH = "../build/simulation"   # 実行ファイルのパス
 PARAM_FILE = "../input/param.txt"
 OUTPUT_DIR = "../output"
-TARGET_FILE = "pressure_vt.dat"    # 解析対象ファイル (pressure_vt)
+TARGET_FILE = "pressure_vt.dat"    # 解析対象
 
 # 探索設定
 PS_MIN = 200.0     # 探索範囲の下限 [Pa]
 PS_MAX = 1000.0    # 探索範囲の上限 [Pa]
-TOLERANCE = 10.0   # 探索を終了する精度（この幅以下になるまで絞り込む）
+TOLERANCE = 10.0   # 探索精度 [Pa]
 
-# 発声判定パラメータ
-START_TIME = 0.1  # 判定開始時間 [s] (過渡応答を避ける)
-AMP_THRESH = 50.0  # 発声とみなす振幅の閾値 [Pa] (これを超えたら発声)
+# 判定条件パラメータ
+START_TIME = 0.1  # 解析開始時間 [s] (過渡応答無視)
+MIN_AMP_PA = 10.0   # 【条件1】最小圧力振幅 [Pa]
+MIN_FREQ = 50.0     # ノイズ/DC成分除外用の最低周波数 [Hz]
 
 # ==========================================
 # 2. 関数定義
 # ==========================================
 
 def update_pressure(filepath, ps_value):
-    """param.txt の Ps (声門下圧) を書き換える"""
+    """param.txt の Ps を書き換える"""
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
@@ -36,7 +39,6 @@ def update_pressure(filepath, ps_value):
         new_lines.append(line)
         if "# subglottal pressure Ps" in line:
             if i + 1 < len(lines):
-                # 小数点以下も書き込む
                 new_lines.append(f"{ps_value:.2f}\n")
                 i += 2
                 continue
@@ -45,91 +47,122 @@ def update_pressure(filepath, ps_value):
     with open(filepath, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
 
-def check_oscillation(filepath, dt=1.0e-5):
+def analyze_oscillation(filepath, dt=1.0e-5):
     """
-    pressure_vt.dat を読み込み、振幅が基準を超えているか判定する
+    発声判定を行う関数
+    戻り値: (判定結果bool, 振幅, F0周波数)
     """
     if not os.path.exists(filepath):
-        return False, 0.0
+        return False, 0.0, 0.0
 
     try:
-        # データの読み込み
-        # 1列目: ステップ数, 2列目: 圧力 (simulation.cppの出力形式に基づく)
         data = np.loadtxt(filepath, skiprows=1)
-        
         if data.ndim == 1 or data.shape[0] < 100:
-            return False, 0.0
+            return False, 0.0, 0.0
 
         time_seq = data[:, 0] * dt
         pressure = data[:, 1]
         
-        # 後半の安定部分のみ抽出
+        # 1. 解析区間の抽出（後半の安定部）
         mask = time_seq >= START_TIME
-        if np.sum(mask) == 0: 
-            # データが短い場合は後半50%を使う
-            mask = time_seq >= (time_seq[-1] * 0.5)
-            
+        if np.sum(mask) == 0: mask = time_seq >= (time_seq[-1] * 0.5)
+        
         y_seg = pressure[mask]
         
-        # 振幅計算: (最大値 - 最小値) / 2
+        # --- 【条件1】時間領域の振幅チェック ---
         amplitude = (np.max(y_seg) - np.min(y_seg)) / 2.0
+        if amplitude < MIN_AMP_PA:
+            # 振幅が小さすぎる時点で不合格
+            return False, amplitude, 0.0
+            
+        # --- 【条件2】FFTによるピーク(F0)チェック ---
+        N = len(y_seg)
         
-        # 判定
-        is_oscillating = amplitude > AMP_THRESH
+        # 直流成分除去 & 窓関数適用
+        y_detrend = y_seg - np.mean(y_seg)
+        window = get_window('hann', N)
+        y_windowed = y_detrend * window
         
-        return is_oscillating, amplitude
+        # FFT計算
+        yf = np.abs(fft(y_windowed))[:N//2]
+        xf = fftfreq(N, d=dt)[:N//2]
+        
+        # 振幅スペクトルを正規化（最大値を1に）
+        if np.max(yf) == 0: return False, amplitude, 0.0
+        yf_norm = yf / np.max(yf)
+        
+        # ピーク検出 (scipy.signal.find_peaks)
+        # prominence: 周辺よりどれだけ突出しているか (0.1 = 最大値の10%以上の突出が必要)
+        # width: ノイズの鋭いスパイクを除外するために幅を指定してもよい
+        peaks, properties = find_peaks(yf_norm, prominence=0.1)
+        
+        valid_peaks = []
+        for p in peaks:
+            freq = xf[p]
+            if freq >= MIN_FREQ: # DCや低周波ドリフトを除外
+                valid_peaks.append((freq, yf_norm[p]))
+        
+        # 有効なピークがなければ発声なし（ただのノイズ）
+        if not valid_peaks:
+            return False, amplitude, 0.0
+            
+        # 最も強いピークをF0とする
+        valid_peaks.sort(key=lambda x: x[1], reverse=True) # 強度順にソート
+        f0_freq = valid_peaks[0][0]
+        
+        # ここまで来たら「振幅十分」かつ「明確なピークあり」
+        return True, amplitude, f0_freq
 
     except Exception as e:
-        print(f"  [Error] Analysis failed: {e}")
-        return False, 0.0
+        print(f"  [Analysis Error] {e}")
+        return False, 0.0, 0.0
 
 # ==========================================
 # 3. メイン処理（二分探索）
 # ==========================================
-# バックアップ作成
 if os.path.exists(PARAM_FILE):
     shutil.copy(PARAM_FILE, PARAM_FILE + ".bak")
 
 try:
-    low = PS_MIN    # 発声しない圧力（の下限）
-    high = PS_MAX   # 発声する圧力（の上限）
+    low = PS_MIN
+    high = PS_MAX
+    best_ptp = None
+    best_freq = 0.0
     
-    best_ptp = None # 見つかったPTP候補
-    
-    print(f"--- Starting PTP Search (Target: {TARGET_FILE}) ---")
-    print(f"Range: {low} - {high} Pa, Threshold Amp: {AMP_THRESH} Pa")
+    print(f"--- PTP Search with FFT Analysis ---")
+    print(f"Conditions: Amp >= {MIN_AMP_PA} Pa AND Clear Peak >= {MIN_FREQ} Hz")
+    print(f"Range: {low} - {high} Pa")
     
     iteration = 1
     
-    # 探索ループ
     while (high - low) > TOLERANCE:
-        # 中間点を試す
         mid = (low + high) / 2.0
-        
         print(f"\n[Iter {iteration}] Testing Ps = {mid:.2f} Pa ... ", end="", flush=True)
         
         # 1. パラメータ更新
         update_pressure(PARAM_FILE, mid)
         
-        # 2. シミュレーション実行 (ログは非表示)
-        ret = subprocess.run([EXE_PATH], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 2. シミュレーション実行 (エラー時は表示されるよう設定)
+        ret = subprocess.run([EXE_PATH])
         
         if ret.returncode != 0:
             print("Simulation Failed.")
             break
             
-        # 3. 判定
+        # 3. 解析
         dat_path = os.path.join(OUTPUT_DIR, TARGET_FILE)
-        is_osc, amp_val = check_oscillation(dat_path)
+        is_osc, amp, freq = analyze_oscillation(dat_path)
         
-        print(f"-> Amp = {amp_val:.2f} Pa [{'OSC' if is_osc else 'SILENCE'}]")
+        status = "OSC" if is_osc else "NO"
+        print(f"-> {status} (Amp: {amp:.1f} Pa, F0: {freq:.1f} Hz)")
         
         if is_osc:
-            # 発声した -> もっと低い圧力でもいけるかもしれない
+            # 発声成功 -> もっと低い圧力を試す
             high = mid
             best_ptp = mid
+            best_freq = freq
         else:
-            # 発声しなかった -> 圧力が足りない
+            # 発声失敗 -> 圧力を上げる
             low = mid
             
         iteration += 1
@@ -137,12 +170,11 @@ try:
     print("\n==========================================")
     if best_ptp is not None:
         print(f" Result: PTP is approx. {best_ptp:.2f} Pa")
-        print(f" (Search ended with range {low:.2f} - {high:.2f} Pa)")
+        print(f" (F0 at threshold: {best_freq:.1f} Hz)")
     else:
-        print(f" Failed: No oscillation found even at {high} Pa.")
+        print(f" Failed: No oscillation found within range.")
     print("==========================================")
 
 finally:
-    # パラメータを元に戻す
     if os.path.exists(PARAM_FILE + ".bak"):
         shutil.move(PARAM_FILE + ".bak", PARAM_FILE)
