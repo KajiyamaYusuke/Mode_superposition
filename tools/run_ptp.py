@@ -15,7 +15,7 @@ TARGET_FILE = "pressure_vt.dat"    # 解析対象
 
 # 探索設定
 PS_MIN = 200.0     # 探索範囲の下限 [Pa]
-PS_MAX = 1000.0    # 探索範囲の上限 [Pa]
+PS_MAX = 1200.0    # 探索範囲の上限 [Pa]
 TOLERANCE = 10.0   # 探索精度 [Pa]
 
 # 判定条件パラメータ
