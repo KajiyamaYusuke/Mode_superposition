@@ -33,7 +33,7 @@ try:
     # dB変換 (Sound Pressure Level)
     amplitude = np.abs(fft_val) / N * 2
     # 0除算防止
-    db_amplitude = 20 * np.log10(amplitude + 1e-12 / 20e-6)
+    db_amplitude = 20 * np.log10(amplitude / 20e-6 + 1e-12 )
     
     # =================================================
     # ★追加：H1, H2, H2k の特定と指標計算

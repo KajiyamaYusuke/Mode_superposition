@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 # =========================
 # 設定
 # =========================
-filename = "../output/pressure.dat"   # ファイル名を合わせました
+filename = "../output/pressure_vt.dat"   # ファイル名を合わせました
 sim_dt = 1.0e-5             # シミュレーションdt
-output_interval = 20        # 出力間隔
+output_interval = 5        # 出力間隔
 dt = sim_dt * output_interval  # サンプリング周期
 
 # =========================
@@ -100,7 +100,7 @@ axes[1].plot(freq, db_amplitude)
 axes[1].set_title("Frequency Domain (FFT)")
 axes[1].set_xlabel("Frequency [Hz]")
 axes[1].set_ylabel("Amplitude")
-axes[1].set_xlim(0, 2000) # 見たい範囲
+axes[1].set_xlim(0, 6000) # 見たい範囲
 axes[1].grid()
 
 plt.tight_layout()
