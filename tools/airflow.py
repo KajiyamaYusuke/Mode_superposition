@@ -1,26 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# 1. datファイルを読み込む（空白区切りやタブ区切りを想定）
+
+# 1. datファイルを読み込む
 harea = np.loadtxt("../output/airflow_vt.dat")
 
-labels = harea[:, 0]        # ← 1列目（横軸のラベル）
-values = harea[:, 1]  
+labels = harea[:, 0]        # 1列目（時間ステップなど）
+values_m3 = harea[:, 1]     # 2列目（流量 [m^3/s]）
 
-# 2. 各行の最小値を求める
-#row_min = np.min(values, axis=1)  # 各行の最小値を1次元配列で返す
+# ★ここで単位変換します
+# [m^3/s] を 1,000,000倍して [ml/s] に変換
+values_ml = values_m3 * 1e6 
 
 x = labels * 1e-5
-start_time = 0.15           # 切り出したい開始時刻 (秒) ※波形を見て調整してください
+start_time = 0.2
 duration   = 0.02
 
 plt.figure(figsize=(15,4))
-plt.plot(x, values, linestyle='-', color='g')  # ← マーカーなし線だけ
-plt.xlabel('time')
-plt.ylabel('airflow')
-plt.title('T4')
+
+# 変換後の values_ml をプロット
+plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
+
+plt.xlabel('Time [s]')
+plt.ylabel('Airflow [ml/s]') # ラベルも変更
+plt.title('T2 (Flow Rate)')
 plt.grid(True)
+
+# 表示範囲の設定（ml/s になったので桁が変わります）
+# 元が 0.001 m^3/s だったら 1000 ml/s です
 plt.xlim(start_time, start_time + duration)
-plt.ylim(-0.001, 0.001)
+plt.ylim(-750, 750) # ※データの振幅に合わせて調整してください
+
 plt.tight_layout()
-plt.legend()
+# plt.legend() # labelを設定していないのでコメントアウトしました
 plt.show()

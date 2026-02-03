@@ -6,6 +6,7 @@ def calculate_spl(filename):
         # 1. データを読み込む
         # comments='#' でヘッダ行をスキップします
         data = np.loadtxt(filename, comments='#')
+        dt = 5e-5
         
         # 2列目(インデックス1)が圧力データと仮定
         # もし1列しかないデータの場合は pressure = data とする
@@ -14,11 +15,18 @@ def calculate_spl(filename):
         else:
             pressure = data[:, 1]
         
-        # 2. 解析区間の設定
-        # シミュレーションの初期過渡応答（立ち上がり）を避けるため、
-        # データの「後半50%」だけを使って計算するのが一般的です。
-        start_idx = int(len(pressure) * 0.5)
-        valid_pressure = pressure[start_idx:]
+        t_start = 0.15
+        t_end   = 0.4
+
+        start_idx = int(t_start / dt)
+        end_idx   = int(t_end / dt)
+
+        # エラー防止（データが短い場合）
+        if end_idx > len(pressure):
+            print(f"警告: 指定された終了時間({t_end}s)がデータ長を超えています。末尾まで使用します。")
+            end_idx = len(pressure)
+
+        valid_pressure = pressure[start_idx:end_idx]
         
         # 3. DC成分（直流バイアス）の除去
         # RMSは交流成分の強さを見るものなので、中心を0に合わせます
