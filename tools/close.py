@@ -85,20 +85,20 @@ else:
     print(f"平均 Closed Quotient: {np.mean(CQ_list):.3f}")
     # print(f"Closed Quotient 分散: {np.std(CQ_list):.3f}")
 
-# --- プロット確認 ---
-plt.figure(figsize=(10, 6))
-plt.subplot(2, 1, 1)
-plt.plot(t_seg, y, label="Min Area (Raw)")
-# 閾値を赤い点線で表示
-plt.axhline(y=area_eps, color='orange', linestyle='--', label=f"Threshold ({area_eps})")
+# # --- プロット確認 ---
+# plt.figure(figsize=(10, 6))
+# plt.subplot(2, 1, 1)
+# plt.plot(t_seg, y, label="Min Area (Raw)")
+# # 閾値を赤い点線で表示
+# plt.axhline(y=area_eps, color='orange', linestyle='--', label=f"Threshold ({area_eps})")
 
-plt.fill_between(
-    t_seg, y.min(), y.max(),
-    where=is_closed,
-    color="red", alpha=0.3,
-    label="Closed Detected"
-)
-plt.legend()
-plt.ylabel("Area")
-plt.title(f"Analysis Range ({0.1}-{0.14}s)")
-plt.show()
+# plt.fill_between(
+#     t_seg, y.min(), y.max(),
+#     where=is_closed,
+#     color="red", alpha=0.3,
+#     label="Closed Detected"
+# )
+# plt.legend()
+# plt.ylabel("Area")
+# plt.title(f"Analysis Range ({0.1}-{0.14}s)")
+# plt.show()
