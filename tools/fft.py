@@ -4,38 +4,30 @@ import matplotlib.pyplot as plt
 # =========================
 # 設定
 # =========================
-filename = "../output/pressure_vt.dat"   # ファイル名を合わせました
-sim_dt = 1.0e-5             # シミュレーションdt
-output_interval = 5       # 出力間隔
-dt = sim_dt * output_interval  # サンプリング周期
+filename = "../output/pressure_vt.dat"
+sim_dt = 1.0e-5
+output_interval = 5
+dt = sim_dt * output_interval
 
 # =========================
 # データ読み込みと解析
 # =========================
-# データ読み込み
 data = np.loadtxt(filename, comments='#')
+pressure = data[:, 1]
 
-# 1列目はステップ数(時間)、2列目以降が圧力データと仮定
-steps = data[:, 0]          # 横軸（ステップ）
-pressure = data[:, 1] # 縦軸計算用（2列目以降すべて）
-
+# 時間切り出し (0.15s - 0.4s)
 t_start = 0.15
 t_end   = 0.4
-
 start_idx = int(t_start / dt)
 end_idx   = int(t_end / dt)
 
-# エラー防止（データが短い場合）
 if end_idx > len(pressure):
-    print(f"警告: 指定された終了時間({t_end}s)がデータ長を超えています。末尾まで使用します。")
     end_idx = len(pressure)
 
 valid_pressure = pressure[start_idx:end_idx]
 
-# DC成分（平均のズレ）を除去
+# DC成分除去 & 窓関数
 valid_pressure = valid_pressure - np.mean(valid_pressure)
-
-# ハニング窓をかける
 window = np.hanning(len(valid_pressure))
 valid_pressure_windowed = valid_pressure * window
 
@@ -43,63 +35,59 @@ valid_pressure_windowed = valid_pressure * window
 N = len(valid_pressure)
 freq = np.fft.rfftfreq(N, d=dt)
 fft_val = np.fft.rfft(valid_pressure_windowed)
-amplitude = np.abs(fft_val) / N * 2
-p0 = 20e-6 
-db_amplitude = 20 * np.log10(amplitude / p0)
 
-# 1. 探索範囲 (20Hz以上)
+# 振幅スペクトル (Linear)
+amplitude = np.abs(fft_val) / N * 2
+
+# ★変更点1: 最大値を0dBにする正規化
+# 最大振幅を見つける
+max_linear_amp = np.max(amplitude)
+# 最大値で割ってから対数をとる (+1e-12は0除算防止)
+db_amplitude = 20 * np.log10(amplitude / max_linear_amp + 1e-12)
+
+# --- F0検出ロジック (変更なし) ---
 mask = freq > 20
 masked_freq = freq[mask]
-masked_amp = amplitude[mask]
+masked_amp = amplitude[mask] # ピーク検出はLinear振幅で行うのが安全
 
-# 2. 「山（ピーク）」をすべて見つける
-# 条件: 左隣より大きく、かつ右隣より大きい点
+f0 = 0
 if len(masked_amp) > 2:
     is_peak = (masked_amp[1:-1] > masked_amp[:-2]) & (masked_amp[1:-1] > masked_amp[2:])
-    # 配列サイズを合わせるため前後にFalseを追加
     is_peak = np.r_[False, is_peak, False]
     
     peak_indices = np.where(is_peak)[0]
     peak_freqs = masked_freq[peak_indices]
     peak_amps = masked_amp[peak_indices]
     
-    # 3. 閾値フィルタ (最大ピークの10%以上あるものだけ残す)
-    max_amp = np.max(masked_amp)
-    threshold = 0.1 * max_amp 
-    
+    # 最大値の10% (-20dB) を閾値とする
+    threshold = 0.1 * max_linear_amp 
     significant_peaks_idx = np.where(peak_amps > threshold)[0]
     
     if len(significant_peaks_idx) > 0:
-        # 4. その中で「一番低い周波数」を選ぶ
         first_peak_idx = significant_peaks_idx[0]
         f0 = peak_freqs[first_peak_idx]
-        f0_amp = peak_amps[first_peak_idx]
-    else:
-        # 万が一閾値を超えるものがない場合は最大値を使う
-        idx = np.argmax(masked_amp)
-        f0 = masked_freq[idx]
-        f0_amp = masked_amp[idx]
-else:
-    f0 = 0
-    f0_amp = 0
 
 print(f"Detected Fundamental Frequency (F0): {f0:.2f} Hz")
 
+# =========================
+# プロット
+# =========================
 fig, ax = plt.subplots(figsize=(10, 6))
 
-# FFT結果のプロット
-ax.plot(freq, db_amplitude)
+# ★変更点2: 色を変更 (color='...')
+# 色の例: 'steelblue', 'firebrick', 'darkgreen', 'navy', 'black', 'orange'
+ax.plot(freq, db_amplitude, color='cornflowerblue',alpha = 0.8, label='Spectrum')
 
-# タイトルやラベルの設定
-ax.set_title(f"Frequency Domain (F0 = {f0:.2f} Hz)")
-ax.set_xlabel("Frequency [Hz]")
-ax.set_ylabel("SPL [dB]")
+ax.set_title(f"Normalized Frequency Domain (F0 = {f0:.2f} Hz)")
+ax.set_xlabel("Frequency [Hz]", fontsize=14)
+ax.set_ylabel("Relative Amplitude [dB]", fontsize=14) # ラベルも変更
 
-# 見たい範囲（0Hz ～ 2000Hz）
-ax.set_xlim(0, 6000) 
+# 0dBが最大なので、上限を少し余裕を持たせて設定
+ax.set_ylim(-160, 5) 
+ax.set_xlim(0, 6000)
 
-# グリッド表示
 ax.grid(which='both', linestyle='--', alpha=0.7)
+ax.legend() # 凡例を表示
 
 plt.tight_layout()
 plt.show()
