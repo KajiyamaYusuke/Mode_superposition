@@ -6,6 +6,7 @@ def calculate_spl(filename):
         # 1. データを読み込む
         # comments='#' でヘッダ行をスキップします
         data = np.loadtxt(filename, comments='#')
+        dt = 5e-5
         
         # 2列目(インデックス1)が圧力データと仮定
         # もし1列しかないデータの場合は pressure = data とする
