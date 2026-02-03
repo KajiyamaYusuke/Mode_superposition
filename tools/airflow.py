@@ -10,7 +10,7 @@ values = harea[:, 1]
 #row_min = np.min(values, axis=1)  # 各行の最小値を1次元配列で返す
 
 x = labels * 1e-5
-start_time = 0.15           # 切り出したい開始時刻 (秒) ※波形を見て調整してください
+start_time = 0.2          # 切り出したい開始時刻 (秒) ※波形を見て調整してください
 duration   = 0.02
 
 plt.figure(figsize=(15,4))
