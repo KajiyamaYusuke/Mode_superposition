@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b20c6.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b5c15.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
 
@@ -26,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b20c6.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b5c15.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b20c6.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b5c15.txt");
 
 
 
@@ -222,7 +222,7 @@ void Simulation::run() {
             fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
             fpv << "\n";
             fuv <<std::setw(4)<< n;
-            fuv << " " <<std::setw(8)<< fCalc.Ud[9] << " ";
+            fuv << " " <<std::setw(8)<< fCalc.currentUg << " ";
             fuv << "\n";
         }
         soundSignal.push_back(fCalc.Pd[9]);
