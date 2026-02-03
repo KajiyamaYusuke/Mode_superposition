@@ -19,12 +19,18 @@ data = np.loadtxt(filename, comments='#')
 steps = data[:, 0]          # 横軸（ステップ）
 pressure = data[:, 1] # 縦軸計算用（2列目以降すべて）
 
-# 各行の最小値を計算（これを波形とする）
-#pressure = np.min(pressure_cols, axis=1)
+t_start = 0.15
+t_end   = 0.4
 
-# ★重要：データの後半（振動している部分）だけを使う
-start_idx = int(len(pressure) * 0.5) 
-valid_pressure = pressure[start_idx:]
+start_idx = int(t_start / dt)
+end_idx   = int(t_end / dt)
+
+# エラー防止（データが短い場合）
+if end_idx > len(pressure):
+    print(f"警告: 指定された終了時間({t_end}s)がデータ長を超えています。末尾まで使用します。")
+    end_idx = len(pressure)
+
+valid_pressure = pressure[start_idx:end_idx]
 
 # DC成分（平均のズレ）を除去
 valid_pressure = valid_pressure - np.mean(valid_pressure)

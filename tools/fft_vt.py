@@ -17,9 +17,19 @@ try:
     data = np.loadtxt(filename, comments='#')
     pressure = data[:, 1]
     
-    # 後半データ切り出し
-    start_idx = int(len(pressure) * 0.5)
-    valid_pressure = pressure[start_idx:]
+    t_start = 0.15  # 開始時間 (秒)
+    t_end   = 0.4   # 終了時間 (秒)
+
+    # 時間をインデックス（配列の何番目か）に変換
+    start_idx = int(t_start / dt)
+    end_idx   = int(t_end / dt)
+
+    # 配列の範囲外エラーを防ぐための安全策
+    if end_idx > len(pressure):
+        end_idx = len(pressure)
+
+    # スライス機能で指定範囲を抽出
+    valid_pressure = pressure[start_idx:end_idx]
     
     # DC除去 & 窓関数
     valid_pressure = valid_pressure - np.mean(valid_pressure)
