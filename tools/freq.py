@@ -17,9 +17,18 @@ try:
     data = np.loadtxt(filename, comments='#')
     pressure = data[:, 1]
     
-    # 後半データ切り出し・窓関数・FFT
-    start_idx = int(len(pressure) * 0.5)
-    valid_pressure = pressure[start_idx:]
+    t_start = 0.15
+    t_end   = 0.4
+
+    start_idx = int(t_start / dt)
+    end_idx   = int(t_end / dt)
+
+    # エラー防止（データが短い場合）
+    if end_idx > len(pressure):
+        print(f"警告: 指定された終了時間({t_end}s)がデータ長を超えています。末尾まで使用します。")
+        end_idx = len(pressure)
+
+    valid_pressure = pressure[start_idx:end_idx]
     valid_pressure = valid_pressure - np.mean(valid_pressure)
     window = np.hanning(len(valid_pressure))
     
