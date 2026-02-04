@@ -13,15 +13,9 @@ void Simulation::initialize() {
     params.loadFromFile("../input/param.txt", err );
 
     geom.loadFromVTK("../input/M5/M5_mode_T3_d2_soft.vtu");
-    //geom.loadFromVTK("../input/M5/M5_mode_T2.vtu");
-    //geom.loadFromVTK("../input/old/no_mem_mode.vtu");
 
-    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_renewal.nas",13,18);
     geom.surfExtractFromNAS("../input/M5/M5_surface_T3_d2.nas",69,70);
-    //geom.surfExtractFromNAS("../input/M5/M5_surface_T2.nas",68,70);
-    //geom.surfExtractFromNAS("/home/kajiyama/code/simulation/input/surface_data_old_c.nas",21,30);
 
-    //geom.surfExtract("/home/kajiyama/code/simulation/input/old/surface.txt", 20);
     geom.surfArea();
     geom.print();
  
@@ -33,10 +27,7 @@ void Simulation::initialize() {
     mdata.initialize(params.nmode, geom);
 
     mdata.loadFromVTU("../input/M5/M5_mode_T3_d2_soft.vtu", geom);
-    //mdata.loadFromVTU_old("../input/old/no_mem_mode.vtu", geom);
     mdata.loadFreqDamping("../input/M5/M5_freq_T3_d2_soft.txt");
-    //mdata.loadFreqDamping("../input/old/no_mem_frequency.txt");
-
 
     mdata.normalizeModes( params.mass, geom);
     
@@ -226,7 +217,7 @@ void Simulation::run() {
         state.uf2u();
 
         if( n % 20 == 0){
-            writeVTK(num, geom, state, "../result", 200);
+            writeVTK(num, geom, state, "../result", 20);
             num++;
         }
 
@@ -236,7 +227,7 @@ void Simulation::run() {
             fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
             fpv << "\n";
             fuv <<std::setw(4)<< n;
-            fuv << " " <<std::setw(8)<< fCalc.Ud[9] << " ";
+            fuv << " " <<std::setw(8)<< fCalc.currentUg << " ";
             fuv << "\n";
         }
         soundSignal.push_back(fCalc.Pd[9]);
