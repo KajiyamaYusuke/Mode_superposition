@@ -80,7 +80,7 @@ void ForceCalculator::initialize() {
 
     // Subglottal parameters (Lu, Cu) - 1セクションあたり
     double dx_sub = L_sub / N_sub;
-    Lu = rho * dx_sub / A_sub;
+    Lu = rho * dx_sub / (2*A_sub);
     Cu = dx_sub * A_sub / (rho * c_sound * c_sound);
 
     alpha1 = -2.5e-5*sp.ps+0.185;
@@ -173,8 +173,8 @@ void ForceCalculator::calcForce(double t, int n) {
             for (int i = 1; i < geom.nxsup; i++) {
                 double dx = std::abs(geom.points[geom.surfp[i][ int(nsurfz/2)]].x - geom.points[geom.surfp[i-1][int(nsurfz/2)]].x);
                 double h  = (state.harea[i] + state.harea[i-1]) / (2.0 * lg);
-                double h_prev = std::max(state.harea[i-1], 1e-3);
-                double h_curr = std::max(state.harea[i], 1e-3);
+                double h_prev = std::max(state.harea[i-1], 1e-6);
+                double h_curr = std::max(state.harea[i], 1e-6);
 
                 double Ugm = currentUg*1e6;
 
@@ -269,7 +269,7 @@ void ForceCalculator::contactForce() {
 
             double f_contact = sp.kc1 * omg2 * pen * (1.0 + sp.kc2 * omg2 * pen * pen);
 
-            double f_damp =  sp.kc3 * pen * ydot;
+            double f_damp =  sp.kc3  * ydot;
 
             double f_total = (f_contact + f_damp) * geom.sarea[i][j] * 1e-6;
 
@@ -351,11 +351,8 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     if (t < rampDuration) {
         // Cosine Ramp (滑らか)
         rampFactor = 0.5 * (1.0 - std::cos(M_PI * t / rampDuration));
-    }else if (t > 0.15) {
-        rampFactor = 0.5 * (1.0 + std::cos(M_PI * (t - 0.15 )/ 0.1));
-    }else{
-        rampFactor = 1.0;
     }
+
     // --- ランプ適用 ---
     // sp.ps (固定パラメータ) に rampFactor をかけて「現在の肺圧」を作る
     double currentLungPressure = sp.ps * rampFactor;
