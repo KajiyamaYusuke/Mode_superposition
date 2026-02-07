@@ -72,22 +72,21 @@ print(f"Detected Fundamental Frequency (F0): {f0:.2f} Hz")
 # =========================
 # プロット
 # =========================
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(8, 6))
 
 # ★変更点2: 色を変更 (color='...')
 # 色の例: 'steelblue', 'firebrick', 'darkgreen', 'navy', 'black', 'orange'
-ax.plot(freq, db_amplitude, color='cornflowerblue',alpha = 0.8, label='Spectrum')
+ax.plot(freq / 1000, db_amplitude, color='cornflowerblue',alpha = 0.8, label='Spectrum')
 
-ax.set_title(f"Normalized Frequency Domain (F0 = {f0:.2f} Hz)")
-ax.set_xlabel("Frequency [Hz]", fontsize=14)
-ax.set_ylabel("Relative Amplitude [dB]", fontsize=14) # ラベルも変更
+#ax.set_title(f"Normalized Frequency Domain (F0 = {f0:.2f} Hz)")
+ax.set_xlabel("Frequency [kHz]", fontsize=20)
+ax.set_ylabel("Relative Amplitude [dB]", fontsize=20) # ラベルも変更
 
 # 0dBが最大なので、上限を少し余裕を持たせて設定
-ax.set_ylim(-160, 5) 
-ax.set_xlim(0, 6000)
-
+ax.set_ylim(-140, 5) 
+ax.set_xlim(0, 6)
+ax.tick_params(direction='in', labelsize=14, top=True, right=True)
 ax.grid(which='both', linestyle='--', alpha=0.7)
-ax.legend() # 凡例を表示
 
 plt.tight_layout()
 plt.show()
