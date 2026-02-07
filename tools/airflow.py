@@ -15,7 +15,7 @@ x = labels * 1e-5
 start_time = 0.2
 duration   = 0.01
 
-plt.figure(figsize=(8,4))
+plt.figure(figsize=(8,2))
 
 # 変換後の values_ml をプロット
 plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
