@@ -80,7 +80,7 @@ ax.plot(freq / 1000, db_amplitude, color='cornflowerblue',alpha = 0.8, label='Sp
 
 #ax.set_title(f"Normalized Frequency Domain (F0 = {f0:.2f} Hz)")
 ax.set_xlabel("Frequency [kHz]", fontsize=20)
-ax.set_ylabel("Relative Amplitude [dB]", fontsize=20) # ラベルも変更
+ax.set_ylabel("Sound Pressure Level [dB]", fontsize=20) # ラベルも変更
 
 # 0dBが最大なので、上限を少し余裕を持たせて設定
 ax.set_ylim(-140, 5) 
