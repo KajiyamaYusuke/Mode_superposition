@@ -22,7 +22,7 @@ plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
 
 plt.xlabel('Time [s]')
 plt.ylabel('Airflow [ml/s]') # ラベルも変更
-plt.title('T2 (Flow Rate)')
+
 plt.grid(True)
 
 # 表示範囲の設定（ml/s になったので桁が変わります）
