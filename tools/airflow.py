@@ -13,22 +13,22 @@ values_ml = values_m3 * 1e6
 
 x = labels * 1e-5
 start_time = 0.2
-duration   = 0.02
+duration   = 0.01
 
-plt.figure(figsize=(15,4))
+plt.figure(figsize=(8,4))
 
 # 変換後の values_ml をプロット
 plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
 
 plt.xlabel('Time [s]')
 plt.ylabel('Airflow [ml/s]') # ラベルも変更
-plt.title('T4 (Flow Rate)')
+
 plt.grid(True)
 
 # 表示範囲の設定（ml/s になったので桁が変わります）
 # 元が 0.001 m^3/s だったら 1000 ml/s です
 plt.xlim(start_time, start_time + duration)
-plt.ylim(-750, 750) # ※データの振幅に合わせて調整してください
+plt.ylim(0, 700) # ※データの振幅に合わせて調整してください
 
 plt.tight_layout()
 # plt.legend() # labelを設定していないのでコメントアウトしました
