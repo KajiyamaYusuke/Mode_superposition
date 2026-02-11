@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scienceplots
+
+plt.style.use(['science','ieee', 'no-latex'])
 
 # 1. datファイルを読み込む
 harea = np.loadtxt("../output/airflow_vt.dat")
@@ -12,10 +15,10 @@ values_m3 = harea[:, 1]     # 2列目（流量 [m^3/s]）
 values_ml = values_m3 * 1e6 
 
 x = labels * 1e-5
-start_time = 0.2
-duration   = 0.01
+start_time = 0.205
+duration   = 0.03
 
-plt.figure(figsize=(8,2))
+plt.figure(figsize=(8,2), dpi=100)
 
 # 変換後の values_ml をプロット
 plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
@@ -32,4 +35,5 @@ plt.ylim(0, 700) # ※データの振幅に合わせて調整してください
 
 plt.tight_layout()
 # plt.legend() # labelを設定していないのでコメントアウトしました
+plt.savefig("result_airflow.png", dpi=300)
 plt.show()

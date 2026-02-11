@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import scienceplots
+
+plt.style.use(['science','ieee', 'no-latex'])
+
 # =========================
 # 設定
 # =========================
@@ -72,7 +76,7 @@ print(f"Detected Fundamental Frequency (F0): {f0:.2f} Hz")
 # =========================
 # プロット
 # =========================
-fig, ax = plt.subplots(figsize=(8, 6))
+fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
 
 # ★変更点2: 色を変更 (color='...')
 # 色の例: 'steelblue', 'firebrick', 'darkgreen', 'navy', 'black', 'orange'
@@ -89,4 +93,5 @@ ax.tick_params(direction='in', labelsize=14, top=True, right=True)
 ax.grid(which='both', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
+plt.savefig("result_fft.png", dpi=300)
 plt.show()
