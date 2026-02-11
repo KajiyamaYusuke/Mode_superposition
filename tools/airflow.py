@@ -23,8 +23,8 @@ plt.figure(figsize=(8,2), dpi=100)
 # 変換後の values_ml をプロット
 plt.plot(x, values_ml, linestyle='-', color='cornflowerblue', alpha = 0.8)
 
-plt.xlabel('Time [s]')
-plt.ylabel('Airflow [ml/s]') # ラベルも変更
+plt.xlabel('Time [s]', fontsize=15)
+plt.ylabel('Airflow [ml/s]', fontsize=15) # ラベルも変更
 
 plt.grid(True)
 
