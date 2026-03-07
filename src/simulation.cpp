@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b5c15.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b75c6.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
 
@@ -26,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b5c15.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b75c6.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b5c15.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b75c6.txt");
 
 
 
@@ -57,12 +57,14 @@ void Simulation::run() {
 
     std::ofstream fa("../output/area.dat");
     std::ofstream fu("../output/displace.dat");
+    std::ofstream fu2("../output/displace2.dat");
     std::ofstream fp("../output/pressure.dat");
     std::ofstream fpv("../output/pressure_vt.dat");
     std::ofstream fuv("../output/airflow_vt.dat");
 
     fa << "# x[m]  area[m^2]\n";
     fu << "# x[m]  displace\n";
+    fu2 << "# x[m] displace\n";
     fp << "# x[m]  pressure[Pa]\n"; 
     fpv << "# x[m]  pressure[Pa]\n";
     fuv << "# x[m]  airflow[l/s]\n";
@@ -89,7 +91,23 @@ void Simulation::run() {
             }
         }
     }
+    minDist2 = 1e2;
+    int nearestIdx2 = -1;
+    for (int i = 0; i < geom.nsurfl; ++i) {
+        for (int j = 0; j < geom.nsurfz; ++j) {
+            int idx = geom.surfp[i][j];
+            double dx = geom.points[idx].x - 7.2;
+            double dz = geom.points[idx].z - 8.6;
+            double dist2 = dx*dx + dz*dz ;
+
+            if (dist2 < minDist2) {
+                minDist2 = dist2;
+                nearestIdx2 = idx;
+            }
+        }
+    }
     std::cout<<"idx="<<geom.points[nearestIdx].x<<", "<<geom.points[nearestIdx].y<<", "<<geom.points[nearestIdx].z<<"\n";
+    std::cout<<"idx2="<<geom.points[nearestIdx2].x<<", "<<geom.points[nearestIdx2].y<<", "<<geom.points[nearestIdx2].z<<"\n";
 
     for ( int i = 0; i < mdata.nModes; ++i){
         zeta[i] = 1/2*(alpha/(2.0 * M_PI * mdata.frequencies[i]) + beta * 2.0 * M_PI * mdata.frequencies[i]);
@@ -208,13 +226,14 @@ void Simulation::run() {
         }
 
         if (n%20 ==0){
-            fu << n *1e-5 << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
+            fu << n *params.dt << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
+            fu2 << n *params.dt << " "<<state.predictedDisp[nearestIdx2].ufy - geom.points[nearestIdx2].y<<" "<<state.predictedDisp[nearestIdx2].ufx - geom.points[nearestIdx2].x<< "\n";
         }
     
         state.uf2u();
 
         if( n % 20 == 0){
-            writeVTK(num, geom, state, "../result", 200);
+            writeVTK(num, geom, state, "../result", 20);
             num++;
         }
         if ( n%5== 0){
