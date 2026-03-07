@@ -28,7 +28,7 @@ result
 # kind of external force (iforce)
 0
 # subglottal pressure Ps (Pa)
-400
+493.128
 # air density (kg/m3)
 1.13
 # air viscousity (Pa s)
@@ -46,5 +46,3 @@ result
 100
 # amplitude for force
 -0.001
-# mass of vocal fold (kg)
-1.0425E-3
