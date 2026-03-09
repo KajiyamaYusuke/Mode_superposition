@@ -122,12 +122,6 @@ void Simulation::run() {
 
         fCalc.calcForce(t, n);
 
-        if (n % 100 == 0) {
-            fCalc.outputForceVectors(n);
-            for (int i = 0; i<25; ++i){
-                //std::cout<<"i = "<<i<<"p = "<<fCalc.psurf[i]<<std::endl;
-            }
-        }
 
         //fCalc.contactForce();
 
@@ -226,7 +220,7 @@ void Simulation::run() {
         state.uf2u();
 
         if( n % 20 == 0){
-            writeVTK(num, geom, state, "../result", 200);
+            writeVTK(num, geom, state, "../result", 20);
             num++;
         }
 
@@ -236,7 +230,7 @@ void Simulation::run() {
             fpv << " " <<std::setw(8)<< fCalc.Pd[9] << " ";
             fpv << "\n";
             fuv <<std::setw(4)<< n;
-            fuv << " " <<std::setw(8)<< fCalc.Ud[9] << " ";
+            fuv << " " <<std::setw(8)<< fCalc.currentUg << " ";
             fuv << "\n";
         }
         soundSignal.push_back(fCalc.Pd[9]);
