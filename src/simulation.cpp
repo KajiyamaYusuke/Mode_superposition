@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T2_b9c3_uniso.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b75c5.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
 
@@ -26,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_b9c3_uniso.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b75c5.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_b9c3_uniso.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b75c5.txt");
 
 
 
@@ -226,8 +226,10 @@ void Simulation::run() {
         }
 
         if (n%20 ==0){
-            fu << n *params.dt << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
-            fu2 << n *params.dt << " "<<state.predictedDisp[nearestIdx2].ufy - geom.points[nearestIdx2].y<<" "<<state.predictedDisp[nearestIdx2].ufx - geom.points[nearestIdx2].x<< "\n";
+            //fu << n *params.dt << " "<<state.predictedDisp[nearestIdx].ufy - geom.points[nearestIdx].y<<" "<<state.predictedDisp[nearestIdx].ufx - geom.points[nearestIdx].x<< "\n";
+            //fu2 << n *params.dt << " "<<state.predictedDisp[nearestIdx2].ufy - geom.points[nearestIdx2].y<<" "<<state.predictedDisp[nearestIdx2].ufx - geom.points[nearestIdx2].x<< "\n";
+            fu << n *params.dt << " "<<state.predictedDisp[nearestIdx].ufy <<" "<<state.predictedDisp[nearestIdx].ufx << "\n";
+            fu2 << n *params.dt << " "<<state.predictedDisp[nearestIdx2].ufy <<" "<<state.predictedDisp[nearestIdx2].ufx << "\n";
         }
     
         state.uf2u();
