@@ -11,10 +11,11 @@ void Simulation::initialize() {
     std::string err ="error";
 
     params.loadFromFile("../input/param.txt", err );
+    params.print();
 
-    geom.loadFromVTK("../input/M5/M5_mode_T4_d2_soft.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_kawahara_mesh7_soft.vtu");
 
-    geom.surfExtractFromNAS("../input/M5/M5_surface_T4_d2.nas",69,70);
+    geom.surfExtractFromNAS("../input/M5/M5_surface_kawahara_mesh7_soft.nas",64,69);
 
     geom.surfArea();
     geom.print();
@@ -25,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T4_d2_soft.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_kawahara_mesh7_soft.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T4_d2.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_kawahara_mesh7_soft.txt");
 
     mdata.normalizeModes( params.mass, geom);
     
@@ -109,13 +110,6 @@ void Simulation::run() {
 
 
         fCalc.calcForce(t, n);
-
-        if (n % 100 == 0) {
-            fCalc.outputForceVectors(n);
-            for (int i = 0; i<25; ++i){
-                //std::cout<<"i = "<<i<<"p = "<<fCalc.psurf[i]<<std::endl;
-            }
-        }
 
         //fCalc.contactForce();
 
@@ -214,8 +208,8 @@ void Simulation::run() {
         state.uf2u();
 
         if( n % 20 == 0){
-            writeVTK(num, geom, state, "../result", 20);
-            //std::cout<<n<<"\n";
+            //writeVTK(num, geom, state, "../result", 20);
+            std::cout<<n<<"\n";
             num++;
         }
         if ( n%5== 0){
@@ -229,7 +223,7 @@ void Simulation::run() {
         soundSignal.push_back(fCalc.Pd[9]);
     }
 
-    WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
+    //WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");
 
     std::cout << "[Simulation] Run complete." << std::endl;
 } 

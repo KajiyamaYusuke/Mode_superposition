@@ -10,9 +10,9 @@
 # time step for time integration dt
 1.0E-5
 # damping coefficient zeta
-0.1
+0.2962
 # contact coefficients kc1 , kc2 and kc3(Pa / m*rad)
-5    6e3    5e3
+17.1    1083.5    103.2
 # max iteration for contact calculation
 100
 # filename for eigenmode frequencies
@@ -28,7 +28,7 @@ result
 # kind of external force (iforce)
 0
 # subglottal pressure Ps (Pa)
-500
+1656.0
 # air density (kg/m3)
 1.13
 # air viscousity (Pa s)

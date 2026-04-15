@@ -157,6 +157,7 @@ void ForceCalculator::calcForce(double t, int n) {
         // ==== 1D flow model ====
         double minA = findMinHarea();
         minHarea[n] = minA;
+        std::cout<<"->";
 
         previousUg = (n > 0 && n-1 < (int)Ug.size()) ? Ug[n-1] : 0.0;
         calcFlowStep(t, sp.dt, minA * 1e-6);
@@ -345,7 +346,7 @@ void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
     
     // --- 1. 声門下 (Subglottal) の更新 ---
     
-    double rampDuration = 0.1; // 50msかけて立ち上げる
+    double rampDuration = 0.04; // 50msかけて立ち上げる
     double rampFactor = 1.0;
 
     
