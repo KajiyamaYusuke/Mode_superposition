@@ -4,7 +4,7 @@
 # number of points along z-axis(nsurfz)
 18
 # number of step nstep
-40000
+15000
 # output interval nwrite
 20
 # time step for time integration dt
@@ -28,7 +28,7 @@ result
 # kind of external force (iforce)
 0
 # subglottal pressure Ps (Pa)
-961.87
+800
 # air density (kg/m3)
 1.13
 # air viscousity (Pa s)

@@ -12,7 +12,7 @@ void Simulation::initialize() {
 
     params.loadFromFile("../input/param.txt", err );
 
-    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b75c5.vtu");
+    geom.loadFromVTK("../input/M5/M5_mode_T2_d2_b15c4.vtu");
 
     geom.surfExtractFromNAS("../input/M5/M5_surface_T2_d2.nas",68,70);
 
@@ -26,9 +26,9 @@ void Simulation::initialize() {
 
     mdata.initialize(params.nmode, geom);
 
-    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b75c5.vtu", geom);
+    mdata.loadFromVTU("../input/M5/M5_mode_T2_d2_b15c4.vtu", geom);
 
-    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b75c5.txt");
+    mdata.loadFreqDamping("../input/M5/M5_freq_T2_d2_b15c4.txt");
 
 
 
@@ -39,6 +39,12 @@ void Simulation::initialize() {
 
     // ForceCalculator 初期化
     fCalc.initialize(); 
+
+    std::ofstream initDbg("../output/debug_step20_30.txt", std::ios::trunc);
+    if (initDbg) {
+        initDbg << "=== Detailed Parameter Log (Steps 20-30) ===\n";
+        initDbg.close();
+    }
 
 
     std::cout << "[Simulation] Initialization complete." << std::endl;
@@ -137,6 +143,28 @@ void Simulation::run() {
 
         //fCalc.contactForce();
 
+        static int debug_step = 0;
+        if (debug_step < 10) {
+            // 1ループ目は新規作成(上書き)、2ループ目以降は追記(app)モードで開く
+            std::ios_base::openmode mode = (debug_step == 0) ? std::ios::out : std::ios::app;
+            std::ofstream fsDeg("../output/Degree_debug.dat", mode);
+            
+            if (fsDeg) {
+                fsDeg << "=== Step: " << debug_step << " ===" << std::endl;
+                fsDeg << "j\tdegL\t\tdegR" << std::endl; // 見出し
+                
+                int test_j = 30; // 観察したいi座標
+                // j全体のループ
+                for (int i = 1; i < geom.nxsup - 1; ++i) {
+                    fsDeg << i << "\t" 
+                        << state.degree[0][i][test_j] << "\n" ;
+                }
+                fsDeg << std::endl;
+                fsDeg.close();
+            }
+            debug_step++;
+        }
+
 
 
         if ( n%5 == 0){
@@ -234,8 +262,47 @@ void Simulation::run() {
     
         state.uf2u();
 
+        if (n >= 200 && n <= 400) {
+            std::ofstream dbgFile("../output/debug_step20_30.txt", std::ios::app);
+            if (dbgFile) {
+                // 小数点以下12桁まで高精度で出力し、微小なズレを逃さない
+                dbgFile << std::scientific << std::setprecision(12);
+                dbgFile << "================ Step " << n << " ================\n";
+                
+                // 1. 流体力学の主要パラメータ
+                dbgFile << "[Fluid]\n";
+                dbgFile << "  minHarea  : " << fCalc.minHarea[n] << "\n";
+                dbgFile << "  currentUg : " << fCalc.currentUg << "\n";
+                dbgFile << "  currentPg : " << fCalc.currentPg << "\n";
+                // 圧力分布の代表点（メッシュ中央付近）
+                int mid_i = geom.nxsup / 2;
+                dbgFile << "  psurf[mid]: " << fCalc.psurf[mid_i] << "\n";
+
+                // 2. モード力と構造力学（1次モード代表）
+                dbgFile << "[Structure - Mode 0]\n";
+                dbgFile << "  fiL[0]    : " << fCalc.fi[0] << "\n";
+                dbgFile << "  qL[0]     : " << state.q[0] << "\n";
+                dbgFile << "  qdotL[0]  : " << state.qdot[0] << "\n";
+                dbgFile << "  qddotL[0] : " << state.qddot[0] << "\n";
+
+                // 3. 実際の節点変位（モニター用の nearestIdxL を使用）
+                dbgFile << "[Nodal Displacement (nearestIdxL)]\n";
+                dbgFile << "  dispL.uy  : " << state.disp[nearestIdx].uy << "\n";
+                // 速度や予測変位も確認
+                dbgFile << "  velL.uy   : " << state.vel[nearestIdx].uy << "\n";
+                
+                // 4. 接触とループ制御
+                dbgFile << "[System]\n";
+                dbgFile << "  contact   : " << (fCalc.contactFlag ? "TRUE" : "FALSE") << "\n";
+                
+                dbgFile << "---------------------------------------\n";
+                dbgFile.close();
+            }
+        }
+
         if( n % 20 == 0){
-            //writeVTK(num, geom, state, "../result", 20);
+            writeVTK(num, geom, state, "../result", 20);
+            fCalc.outputForceVectors(n);
             num++;
         }
         if ( n%5== 0){
@@ -247,6 +314,27 @@ void Simulation::run() {
             fuv << "\n";
         }
         soundSignal.push_back(fCalc.Pd[9]);
+
+        if (t <= 0.5 && n%20 == 0) {
+            static int step = 0;
+            std::ostringstream filename;
+            filename << "../output_force/contact_force_" << std::setw(6) << std::setfill('0') << step << ".txt";
+            step++;
+            // そのステップ用のファイルを開く
+            std::ofstream fcOut(filename.str());
+            if (fcOut) {
+                fcOut << "Time: " << t << "\n";
+                
+                fcOut << "[Left]\n";
+                for (int i = 0; i < geom.nxsup; ++i) {
+                    for (int j = 0; j < geom.nsurfz; ++j) {
+                        fcOut << std::scientific << fCalc.contactForce_ij[i][j] << " ";
+                    }
+                    fcOut << "\n";
+                }
+                fcOut.close(); // 書き終わったら閉じる
+            }
+        }
     }
 
     WavWriter::save(soundSignal, params.dt, "../output/output_sound.wav");

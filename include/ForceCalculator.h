@@ -36,7 +36,9 @@ public:
     std::vector<double> Ud; // Downstream (Vocal Tract) flow
     
     double currentUg;
+    double currentPg;   // Subglottal pressure at glottis entry
     double max_force_diff;
+    std::vector<std::vector<double>> contactForce_ij;
 
 private:
     // --- 新規追加: 圧縮性流体モデル用の変数 ---
@@ -57,7 +59,7 @@ private:
     // 現在のステップのUg
     double previousUg = 0.0;
     
-    double currentPg;   // Subglottal pressure at glottis entry
+    
     double currentPout; // Radiation pressure
 
     // 物理定数・回路定数 (Initializeで計算または設定)

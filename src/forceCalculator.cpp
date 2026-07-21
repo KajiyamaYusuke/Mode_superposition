@@ -109,6 +109,9 @@ void ForceCalculator::initialize() {
         Lr = 0.0;
         Rr = 0.0;
     }
+
+    contactForce_ij.resize(geom.nxsup, std::vector<double>(geom.nsurfz, 0.0));
+    std::ofstream initDebugFile("../output/debug_force.txt", std::ios::trunc);
     
 
     std::cout << "[ForceCalculator] initialized: "
@@ -169,6 +172,14 @@ void ForceCalculator::calcForce(double t, int n) {
         std::fill(psurf.begin(), psurf.end(), 0.0);
         psurf[0] = currentPg;
 
+        std::ofstream debugFile("../output/debug_force.txt", std::ios::app);
+        if(debugFile){
+            debugFile << "Step: " << std::setw(4) << n 
+                      << " | minA: " << std::scientific << std::setprecision(12) << minA 
+                      << " | subPg: " << std::scientific << std::setprecision(12) << currentPg  << "\n";
+            debugFile.close();
+        }
+
         if (minA > 1e-6 ) {
             for (int i = 1; i < geom.nxsup; i++) {
                 double dx = std::abs(geom.points[geom.surfp[i][ int(nsurfz/2)]].x - geom.points[geom.surfp[i-1][int(nsurfz/2)]].x);
@@ -211,8 +222,22 @@ void ForceCalculator::calcForce(double t, int n) {
                 fy[i][j] = -psurf[i] * ds * dz * 1.0e-6 * std::cos(state.degree[1][i][j]) * std::cos(state.degree[0][i][j]);
                 fz[i][j] = psurf[i] * ds * dz * 1.0e-6 * std::sin(state.degree[1][i][j]);
 
+                // if (i == 38 && j == 10) { // 情報過多を防ぐため、jは中央の代表点のみを出力
+                //         std::ofstream debugFile("../output/debug_force.txt", std::ios::app);
+                //         if(debugFile){
+                //             debugFile << std::scientific << std::setprecision(8);
+                //             debugFile << "=== Debug Step: " << n << " | i=" << i << ", j=" << j << " ===\n";
+                //             debugFile << "[Common] psurf : " << psurf[i] << "\n";
+                            
+                //             debugFile << "[Left ] dsL: " << ds << " | dzL: " << dz
+                //                     << " | degL0(x-y): " << state.degree[0][i][j] 
+                //                     << " | degL1(y-z): " << state.degree[1][i][j] 
+                //                     << " => fyL: " << fy[i][j] << "\n";
+                //                     debugFile.close();}
+                //     }
+
+                }
             }
-        }
         
     }
     
@@ -283,6 +308,10 @@ void ForceCalculator::contactForce() {
 }
 
 void ForceCalculator::calcDis() {
+
+    for(int i = 0; i < geom.nxsup; ++i){
+        std::fill(contactForce_ij[i].begin(), contactForce_ij[i].end(), 0.0);
+    }
     contactFlag = false;
 
     // 固有角振動数（スケーリング用）
@@ -333,19 +362,40 @@ void ForceCalculator::calcDis() {
 
                 // 力を保存・適用
                 fdis[i][j] = f_total;
+                contactForce_ij[i][j] = f_total;
                 fy[i][j] += fdis[i][j];
 
                 contactFlag = true;
+
+                
+                static int callcalcDis = 0 ;
+                if (callcalcDis == 0 ){
+                    std::cout<<"first cintact" <<"\n";
+                }; 
+                callcalcDis++;
             }
         }
     }
 }
 
 void ForceCalculator::calcFlowStep(double t, double dt, double min_area) {
+
+    static bool printed_constants = false;
+    if (t > 0.0 && !printed_constants) {
+        std::cout << "\n=== [DEBUG] calcFlowStep Constants at Step 1 ===" << std::scientific << std::setprecision(12) << std::endl;
+        std::cout << "ps (Lung Press): " << sp.ps << std::endl;
+        std::cout << "rho: " << rho << " | mu: " << mu << std::endl;
+        std::cout << "xsup: " << geom.xsup << " | lg: " << lg << std::endl;
+        std::cout << "beta: " << beta << " | R2: " << R2 << std::endl;
+        std::cout << "Cu: " << Cu << " | Lu: " << Lu << std::endl;
+        std::cout << "La: " << La << " | Ca: " << Ca << std::endl;
+        std::cout << "=================================================\n" << std::endl;
+        printed_constants = true;
+    }
     
     // --- 1. 声門下 (Subglottal) の更新 ---
     
-    double rampDuration = 0.1; // 50msかけて立ち上げる
+    double rampDuration = 0.05; // 50msかけて立ち上げる
     double rampFactor = 1.0;
     
     if (t < rampDuration) {
